@@ -1,3 +1,5 @@
+from collections.abc import Iterator
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -8,7 +10,7 @@ client = TestClient(app)
 
 
 @pytest.fixture(autouse=True)
-def reset_store() -> None:
+def reset_store() -> Iterator[None]:
     store.reset()
     yield
     store.reset()

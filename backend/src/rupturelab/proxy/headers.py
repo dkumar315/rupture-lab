@@ -21,6 +21,8 @@ REQUEST_EXCLUDED_HEADERS = HOP_BY_HOP_HEADERS | {
 RESPONSE_EXCLUDED_HEADERS = HOP_BY_HOP_HEADERS | {
     "content-encoding",
     "content-length",
+    "date",
+    "server",
 }
 
 

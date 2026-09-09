@@ -13,20 +13,22 @@ HttpMethod = Literal[
 ]
 
 
+def default_http_methods() -> list[HttpMethod]:
+    return [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "OPTIONS",
+        "HEAD",
+    ]
+
+
 class FaultProfile(BaseModel):
     enabled: bool = False
     path_prefix: str = "/"
-    methods: list[HttpMethod] = Field(
-        default_factory=lambda: [
-            "GET",
-            "POST",
-            "PUT",
-            "PATCH",
-            "DELETE",
-            "OPTIONS",
-            "HEAD",
-        ]
-    )
+    methods: list[HttpMethod] = Field(default_factory=default_http_methods)
     probability: float = Field(default=1.0, ge=0.0, le=1.0)
 
     latency_ms: int = Field(default=0, ge=0, le=30_000)

@@ -3,7 +3,6 @@ from fastapi import APIRouter, Request, Response, status
 from rupturelab.faults.engine import FaultEngine
 from rupturelab.faults.models import FaultProfile
 
-
 router = APIRouter(
     prefix="/_rupturelab",
     tags=["rupturelab"],

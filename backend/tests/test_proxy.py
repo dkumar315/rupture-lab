@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from rupturelab.demo_target.main import app as demo_app
 from rupturelab.demo_target.store import store
+from rupturelab.proxy.headers import build_downstream_headers
 from rupturelab.proxy.main import create_proxy_app
 
 
@@ -132,3 +133,24 @@ def test_unreachable_upstream_returns_bad_gateway() -> None:
     assert response.json() == {
         "detail": "Upstream service unavailable",
     }
+
+
+def test_proxy_generated_response_headers_are_not_forwarded() -> None:
+    upstream_headers = httpx2.Headers(
+        {
+            "Date": "Wed, 09 Sep 2026 00:00:00 GMT",
+            "Server": "demo-target",
+            "Content-Type": "application/json",
+            "X-Demo-Target": "rupturelab",
+        }
+    )
+
+    forwarded = {
+        name.decode("latin-1").lower(): value.decode("latin-1")
+        for name, value in build_downstream_headers(upstream_headers)
+    }
+
+    assert "date" not in forwarded
+    assert "server" not in forwarded
+    assert forwarded["content-type"] == "application/json"
+    assert forwarded["x-demo-target"] == "rupturelab"

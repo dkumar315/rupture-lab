@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import httpx2
 
+from rupturelab.contracts.evaluator import evaluate_contract
 from rupturelab.experiments.metrics import summarize_phase
 from rupturelab.experiments.models import (
     ExperimentResult,
@@ -51,16 +52,23 @@ class ExperimentRunner:
             spec,
         )
 
+        phases = [
+            baseline,
+            fault,
+            recovery,
+        ]
+
+        contract_evaluation = (
+            evaluate_contract(spec.contract, phases) if spec.contract is not None else None
+        )
+
         return ExperimentResult(
             experiment_id=str(uuid4()),
             name=spec.name,
             started_at=started_at.isoformat(),
             spec=spec,
-            phases=[
-                baseline,
-                fault,
-                recovery,
-            ],
+            phases=phases,
+            contract_evaluation=contract_evaluation,
         )
 
     async def _run_phase(

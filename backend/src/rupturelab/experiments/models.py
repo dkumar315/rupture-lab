@@ -2,6 +2,10 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from rupturelab.contracts.models import (
+    ContractEvaluation,
+    ResilienceContract,
+)
 from rupturelab.faults.models import FaultProfile, HttpMethod
 
 PhaseName = Literal["baseline", "fault", "recovery"]
@@ -16,6 +20,7 @@ class ExperimentSpec(BaseModel):
     headers: dict[str, str] = Field(default_factory=dict)
     body: dict[str, object] | None = None
     fault: FaultProfile
+    contract: ResilienceContract | None = None
 
     @model_validator(mode="after")
     def validate_spec(self) -> "ExperimentSpec":
@@ -58,3 +63,4 @@ class ExperimentResult(BaseModel):
     started_at: str
     spec: ExperimentSpec
     phases: list[PhaseResult]
+    contract_evaluation: ContractEvaluation | None = None

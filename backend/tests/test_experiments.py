@@ -1,4 +1,5 @@
 import httpx2
+import pytest
 from fastapi.testclient import TestClient
 
 from rupturelab.main import create_app
@@ -206,3 +207,211 @@ def test_experiment_requires_enabled_fault() -> None:
         )
 
     assert response.status_code == 422
+
+
+class RejectFaultTransport(httpx2.AsyncBaseTransport):
+    async def handle_async_request(
+        self,
+        request: httpx2.Request,
+    ) -> httpx2.Response:
+        if request.method == "DELETE":
+            return httpx2.Response(204, request=request)
+
+        if request.method == "PUT":
+            return httpx2.Response(422, request=request)
+
+        return httpx2.Response(200, request=request)
+
+    async def aclose(self) -> None:
+        return None
+
+
+class ConfigureDisconnectTransport(httpx2.AsyncBaseTransport):
+    async def handle_async_request(
+        self,
+        request: httpx2.Request,
+    ) -> httpx2.Response:
+        if request.method == "DELETE":
+            return httpx2.Response(204, request=request)
+
+        if request.method == "PUT":
+            raise httpx2.ConnectError(
+                "proxy disconnected",
+                request=request,
+            )
+
+        return httpx2.Response(200, request=request)
+
+    async def aclose(self) -> None:
+        return None
+
+
+class ClearDisconnectTransport(httpx2.AsyncBaseTransport):
+    async def handle_async_request(
+        self,
+        request: httpx2.Request,
+    ) -> httpx2.Response:
+        raise httpx2.ConnectError(
+            "proxy disconnected",
+            request=request,
+        )
+
+    async def aclose(self) -> None:
+        return None
+
+
+class FailedRecoveryClearTransport(httpx2.AsyncBaseTransport):
+    def __init__(self) -> None:
+        self.delete_count = 0
+        self.fault_enabled = False
+
+    async def handle_async_request(
+        self,
+        request: httpx2.Request,
+    ) -> httpx2.Response:
+        if request.method == "DELETE":
+            self.delete_count += 1
+
+            if self.delete_count == 1:
+                self.fault_enabled = False
+                return httpx2.Response(204, request=request)
+
+            return httpx2.Response(500, request=request)
+
+        if request.method == "PUT":
+            self.fault_enabled = True
+            return httpx2.Response(
+                200,
+                json={"enabled": True},
+                request=request,
+            )
+
+        if self.fault_enabled:
+            return httpx2.Response(
+                503,
+                headers={"X-RuptureLab-Fault": "http-error"},
+                request=request,
+            )
+
+        return httpx2.Response(200, request=request)
+
+    async def aclose(self) -> None:
+        return None
+
+
+def experiment_payload(
+    *,
+    requests_per_phase: int = 1,
+    interval_ms: int = 0,
+) -> dict[str, object]:
+    return {
+        "name": "edge-case-experiment",
+        "method": "GET",
+        "path": "/demo/products",
+        "requests_per_phase": requests_per_phase,
+        "interval_ms": interval_ms,
+        "fault": {
+            "enabled": True,
+            "path_prefix": "/demo/products",
+            "methods": ["GET"],
+            "probability": 1.0,
+            "error_status": 503,
+        },
+    }
+
+
+def test_experiment_reports_rejected_fault_configuration() -> None:
+    app = create_app(
+        proxy_url="http://proxy",
+        transport=RejectFaultTransport(),
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/experiments/run",
+            json=experiment_payload(),
+        )
+
+    assert response.status_code == 502
+    assert response.json() == {"detail": "Proxy rejected the experiment fault profile"}
+
+
+def test_experiment_reports_fault_configuration_disconnect() -> None:
+    app = create_app(
+        proxy_url="http://proxy",
+        transport=ConfigureDisconnectTransport(),
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/experiments/run",
+            json=experiment_payload(),
+        )
+
+    assert response.status_code == 502
+    assert response.json() == {"detail": "Could not reach the RuptureLab proxy"}
+
+
+def test_experiment_reports_initial_clear_disconnect() -> None:
+    app = create_app(
+        proxy_url="http://proxy",
+        transport=ClearDisconnectTransport(),
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/experiments/run",
+            json=experiment_payload(),
+        )
+
+    assert response.status_code == 502
+    assert response.json() == {"detail": "Could not reach the RuptureLab proxy"}
+
+
+def test_experiment_reports_failed_fault_cleanup() -> None:
+    app = create_app(
+        proxy_url="http://proxy",
+        transport=FailedRecoveryClearTransport(),
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/experiments/run",
+            json=experiment_payload(),
+        )
+
+    assert response.status_code == 502
+    assert response.json() == {"detail": "Proxy could not clear its fault profile"}
+
+
+def test_experiment_waits_between_requests(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sleeps: list[float] = []
+
+    async def fake_sleep(seconds: float) -> None:
+        sleeps.append(seconds)
+
+    monkeypatch.setattr(
+        "rupturelab.experiments.runner.asyncio.sleep",
+        fake_sleep,
+    )
+
+    transport = ScriptedProxyTransport()
+
+    app = create_app(
+        proxy_url="http://proxy",
+        transport=transport,
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/experiments/run",
+            json=experiment_payload(
+                requests_per_phase=2,
+                interval_ms=25,
+            ),
+        )
+
+    assert response.status_code == 200
+    assert sleeps == [0.025, 0.025, 0.025]

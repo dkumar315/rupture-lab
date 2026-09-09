@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 from rupturelab.config import get_settings
-from rupturelab.db.base import Base
+from rupturelab.db import models as db_models
 
 config = context.config
 config.set_main_option(
@@ -14,7 +14,7 @@ config.set_main_option(
     get_settings().database_url,
 )
 
-target_metadata = Base.metadata
+target_metadata = db_models.Base.metadata
 
 
 def run_migrations_offline() -> None:

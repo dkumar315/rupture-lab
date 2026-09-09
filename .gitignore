@@ -30,3 +30,8 @@ artifacts/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Python packaging
+*.egg-info/
+build/
+dist/

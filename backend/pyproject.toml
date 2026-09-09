@@ -16,6 +16,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "mypy>=1.14,<2.0",
     "pytest>=8.3,<9.0",
     "pytest-cov>=6.0,<7.0",
     "ruff>=0.8,<1.0",
@@ -46,3 +47,11 @@ source = ["rupturelab"]
 show_missing = true
 skip_covered = true
 fail_under = 100
+
+[tool.mypy]
+python_version = "3.10"
+mypy_path = ["src"]
+strict = true
+pretty = true
+show_error_codes = true
+warn_unreachable = true

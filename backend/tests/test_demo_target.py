@@ -124,3 +124,13 @@ def test_echo_reports_request_details() -> None:
         "trace_id": "trace-123",
         "body": {"message": "hello"},
     }
+
+
+def test_echo_operations_have_unique_openapi_ids() -> None:
+    response = client.get("/openapi.json")
+
+    assert response.status_code == 200
+
+    echo_path = response.json()["paths"]["/demo/echo"]
+
+    assert echo_path["get"]["operationId"] != echo_path["post"]["operationId"]

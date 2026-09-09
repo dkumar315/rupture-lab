@@ -55,17 +55,11 @@ async def create_order(
     )
 
 
-@router.api_route(
-    "/echo",
-    methods=["GET", "POST"],
-    response_model=EchoResponse,
-)
-async def echo(request: Request, response: Response) -> EchoResponse:
-    body = None
-
-    if request.method == "POST":
-        body = await request.json()
-
+def build_echo_response(
+    request: Request,
+    response: Response,
+    body: dict[str, str] | None,
+) -> EchoResponse:
     response.headers["X-Demo-Target"] = "rupturelab"
 
     return EchoResponse(
@@ -74,6 +68,24 @@ async def echo(request: Request, response: Response) -> EchoResponse:
         trace_id=request.headers.get("x-trace-id"),
         body=body,
     )
+
+
+@router.get("/echo", response_model=EchoResponse)
+async def echo_get(
+    request: Request,
+    response: Response,
+) -> EchoResponse:
+    return build_echo_response(request, response, None)
+
+
+@router.post("/echo", response_model=EchoResponse)
+async def echo_post(
+    request: Request,
+    response: Response,
+) -> EchoResponse:
+    body: dict[str, str] = await request.json()
+
+    return build_echo_response(request, response, body)
 
 
 @router.get("/stats", response_model=DemoStats)

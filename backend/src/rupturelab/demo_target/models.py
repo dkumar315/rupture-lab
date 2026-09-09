@@ -30,3 +30,10 @@ class DemoStats(BaseModel):
     total_orders: int
     unique_client_requests: int
     duplicate_logical_writes: int
+
+
+class EchoResponse(BaseModel):
+    method: str
+    query: list[tuple[str, str]]
+    trace_id: str | None
+    body: dict[str, str] | None

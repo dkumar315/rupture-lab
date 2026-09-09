@@ -1,8 +1,15 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Header, HTTPException, Response, status
+from fastapi import APIRouter, Header, HTTPException, Request, Response, status
 
-from rupturelab.demo_target.models import DemoStats, Order, OrderCreate, OrderResult, Product
+from rupturelab.demo_target.models import (
+    DemoStats,
+    EchoResponse,
+    Order,
+    OrderCreate,
+    OrderResult,
+    Product,
+)
 from rupturelab.demo_target.store import store
 
 router = APIRouter(prefix="/demo", tags=["demo-target"])
@@ -45,6 +52,27 @@ async def create_order(
     return OrderResult(
         order=order,
         replayed=replayed,
+    )
+
+
+@router.api_route(
+    "/echo",
+    methods=["GET", "POST"],
+    response_model=EchoResponse,
+)
+async def echo(request: Request, response: Response) -> EchoResponse:
+    body = None
+
+    if request.method == "POST":
+        body = await request.json()
+
+    response.headers["X-Demo-Target"] = "rupturelab"
+
+    return EchoResponse(
+        method=request.method,
+        query=list(request.query_params.multi_items()),
+        trace_id=request.headers.get("x-trace-id"),
+        body=body,
     )
 
 

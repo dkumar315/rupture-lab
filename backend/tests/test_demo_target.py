@@ -107,3 +107,20 @@ def test_reset_clears_orders() -> None:
 
     assert stats["total_orders"] == 0
     assert stats["duplicate_logical_writes"] == 0
+
+
+def test_echo_reports_request_details() -> None:
+    response = client.post(
+        "/demo/echo?tag=one&tag=two",
+        headers={"X-Trace-ID": "trace-123"},
+        json={"message": "hello"},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["x-demo-target"] == "rupturelab"
+    assert response.json() == {
+        "method": "POST",
+        "query": [["tag", "one"], ["tag", "two"]],
+        "trace_id": "trace-123",
+        "body": {"message": "hello"},
+    }

@@ -415,3 +415,58 @@ def test_experiment_waits_between_requests(
 
     assert response.status_code == 200
     assert sleeps == [0.025, 0.025, 0.025]
+
+
+def test_experiment_evaluates_resilience_contract() -> None:
+    transport = ScriptedProxyTransport()
+
+    app = create_app(
+        proxy_url="http://proxy",
+        transport=transport,
+    )
+
+    payload = experiment_payload(
+        requests_per_phase=2,
+    )
+
+    payload["contract"] = {
+        "name": "products-recovery-contract",
+        "baseline": {
+            "min_success_rate": 1.0,
+        },
+        "fault": {
+            "min_fault_rate": 1.0,
+        },
+        "recovery": {
+            "min_success_rate": 1.0,
+            "max_transport_errors": 0,
+        },
+    }
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/experiments/run",
+            json=payload,
+        )
+
+    assert response.status_code == 200
+
+    result = response.json()
+    evaluation = result["contract_evaluation"]
+
+    assert result["spec"]["contract"]["name"] == ("products-recovery-contract")
+    assert evaluation["contract_name"] == ("products-recovery-contract")
+    assert evaluation["passed"] is True
+    assert len(evaluation["checks"]) == 4
+
+    checks = {(check["phase"], check["metric"]): check for check in evaluation["checks"]}
+
+    assert checks[("baseline", "success_rate")]["observed"] == 1.0
+
+    assert checks[("fault", "fault_rate")]["observed"] == 1.0
+
+    assert checks[("recovery", "success_rate")]["observed"] == 1.0
+
+    assert checks[("recovery", "transport_errors")]["observed"] == 0
+
+    assert all(check["passed"] for check in evaluation["checks"])

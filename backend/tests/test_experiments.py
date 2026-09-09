@@ -507,9 +507,9 @@ def test_experiment_returns_failed_contract_evaluation() -> None:
     )
 
     payload["contract"] = {
-        "name": "impossible-latency-contract",
-        "recovery": {
-            "max_p95_latency_ms": 0.0,
+        "name": "fault-tolerance-contract",
+        "fault": {
+            "min_success_rate": 1.0,
         },
     }
 
@@ -523,15 +523,15 @@ def test_experiment_returns_failed_contract_evaluation() -> None:
 
     evaluation = response.json()["contract_evaluation"]
 
-    assert evaluation["contract_name"] == ("impossible-latency-contract")
+    assert evaluation["contract_name"] == "fault-tolerance-contract"
     assert evaluation["passed"] is False
     assert len(evaluation["checks"]) == 1
 
     check = evaluation["checks"][0]
 
-    assert check["phase"] == "recovery"
-    assert check["metric"] == "p95_latency_ms"
-    assert check["operator"] == "<="
-    assert check["expected"] == 0.0
-    assert check["observed"] > 0.0
+    assert check["phase"] == "fault"
+    assert check["metric"] == "success_rate"
+    assert check["operator"] == ">="
+    assert check["expected"] == 1.0
+    assert check["observed"] == 0.0
     assert check["passed"] is False

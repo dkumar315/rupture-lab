@@ -1,7 +1,6 @@
 import httpx2
 from starlette.datastructures import Headers
 
-
 HOP_BY_HOP_HEADERS = {
     "connection",
     "keep-alive",

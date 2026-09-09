@@ -1,3 +1,5 @@
+from typing import cast
+
 from fastapi import APIRouter, Request, Response, status
 
 from rupturelab.faults.engine import FaultEngine
@@ -10,7 +12,10 @@ router = APIRouter(
 
 
 def get_fault_engine(request: Request) -> FaultEngine:
-    return request.app.state.fault_engine
+    return cast(
+        FaultEngine,
+        request.app.state.fault_engine,
+    )
 
 
 @router.get("/fault", response_model=FaultProfile)

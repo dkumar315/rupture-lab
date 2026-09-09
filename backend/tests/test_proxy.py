@@ -11,7 +11,7 @@ from rupturelab.proxy.main import create_proxy_app
 
 
 @pytest.fixture(autouse=True)
-def reset_demo_store() -> None:
+def reset_demo_store() -> Iterator[None]:
     store.reset()
     yield
     store.reset()

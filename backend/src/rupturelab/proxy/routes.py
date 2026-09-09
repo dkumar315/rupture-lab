@@ -90,7 +90,7 @@ async def forward_request(
         upstream = await client.request(
             method=request.method,
             url=request.url.path,
-            params=request.query_params.multi_items(),
+            params=request.url.query,
             headers=build_upstream_headers(request.headers),
             content=body,
         )

@@ -10,7 +10,7 @@ from rupturelab.proxy.main import create_proxy_app
 
 
 @pytest.fixture(autouse=True)
-def reset_demo_store() -> None:
+def reset_demo_store() -> Iterator[None]:
     store.reset()
     yield
     store.reset()
@@ -276,3 +276,21 @@ def test_invalid_terminal_fault_combination_is_rejected(
     )
 
     assert response.status_code == 422
+
+
+def test_current_fault_profile_can_be_read(
+    proxy_client: TestClient,
+) -> None:
+    configure_fault(
+        proxy_client,
+        path_prefix="/demo/products",
+        methods=["GET"],
+        error_status=503,
+    )
+
+    response = proxy_client.get("/_rupturelab/fault")
+
+    assert response.status_code == 200
+    assert response.json()["enabled"] is True
+    assert response.json()["error_status"] == 503
+    assert response.json()["path_prefix"] == "/demo/products"

@@ -1,3 +1,5 @@
+from collections.abc import Iterator
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -8,7 +10,7 @@ client = TestClient(app)
 
 
 @pytest.fixture(autouse=True)
-def reset_store() -> None:
+def reset_store() -> Iterator[None]:
     store.reset()
     yield
     store.reset()
@@ -134,3 +136,35 @@ def test_echo_operations_have_unique_openapi_ids() -> None:
     echo_path = response.json()["paths"]["/demo/echo"]
 
     assert echo_path["get"]["operationId"] != echo_path["post"]["operationId"]
+
+
+def test_orders_endpoint_lists_created_orders() -> None:
+    client.post(
+        "/demo/orders",
+        json={
+            "client_request_id": "list-orders-001",
+            "product_id": "keyboard",
+            "quantity": 1,
+        },
+    )
+
+    response = client.get("/demo/orders")
+
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]["id"] == "ord-0001"
+
+
+def test_echo_get_reports_request_details() -> None:
+    response = client.get(
+        "/demo/echo?tag=one&tag=two",
+        headers={"X-Trace-ID": "trace-get-001"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "method": "GET",
+        "query": [["tag", "one"], ["tag", "two"]],
+        "trace_id": "trace-get-001",
+        "body": None,
+    }

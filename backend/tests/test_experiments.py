@@ -470,3 +470,68 @@ def test_experiment_evaluates_resilience_contract() -> None:
     assert checks[("recovery", "transport_errors")]["observed"] == 0
 
     assert all(check["passed"] for check in evaluation["checks"])
+
+
+def test_experiment_without_contract_returns_no_evaluation() -> None:
+    transport = ScriptedProxyTransport()
+
+    app = create_app(
+        proxy_url="http://proxy",
+        transport=transport,
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/experiments/run",
+            json=experiment_payload(),
+        )
+
+    assert response.status_code == 200
+
+    result = response.json()
+
+    assert result["spec"]["contract"] is None
+    assert result["contract_evaluation"] is None
+
+
+def test_experiment_returns_failed_contract_evaluation() -> None:
+    transport = ScriptedProxyTransport()
+
+    app = create_app(
+        proxy_url="http://proxy",
+        transport=transport,
+    )
+
+    payload = experiment_payload(
+        requests_per_phase=2,
+    )
+
+    payload["contract"] = {
+        "name": "impossible-latency-contract",
+        "recovery": {
+            "max_p95_latency_ms": 0.0,
+        },
+    }
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/experiments/run",
+            json=payload,
+        )
+
+    assert response.status_code == 200
+
+    evaluation = response.json()["contract_evaluation"]
+
+    assert evaluation["contract_name"] == ("impossible-latency-contract")
+    assert evaluation["passed"] is False
+    assert len(evaluation["checks"]) == 1
+
+    check = evaluation["checks"][0]
+
+    assert check["phase"] == "recovery"
+    assert check["metric"] == "p95_latency_ms"
+    assert check["operator"] == "<="
+    assert check["expected"] == 0.0
+    assert check["observed"] > 0.0
+    assert check["passed"] is False

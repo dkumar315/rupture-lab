@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from time import perf_counter
 from uuid import uuid4
 
@@ -28,7 +28,7 @@ class ExperimentRunner:
         self,
         spec: ExperimentSpec,
     ) -> ExperimentResult:
-        started_at = datetime.now(timezone.utc)
+        started_at = datetime.now(UTC)
 
         await self._clear_fault()
 

@@ -37,7 +37,7 @@ class FaultProfile(BaseModel):
     malformed_json: bool = False
 
     @model_validator(mode="after")
-    def validate_profile(self) -> "FaultProfile":
+    def validate_profile(self) -> FaultProfile:
         if not self.path_prefix.startswith("/"):
             raise ValueError("path_prefix must start with '/'")
 

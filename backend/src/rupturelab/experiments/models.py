@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
@@ -23,7 +24,7 @@ class ExperimentSpec(BaseModel):
     contract: ResilienceContract | None = None
 
     @model_validator(mode="after")
-    def validate_spec(self) -> "ExperimentSpec":
+    def validate_spec(self) -> ExperimentSpec:
         if not self.path.startswith("/"):
             raise ValueError("path must start with '/'")
 
@@ -64,3 +65,15 @@ class ExperimentResult(BaseModel):
     spec: ExperimentSpec
     phases: list[PhaseResult]
     contract_evaluation: ContractEvaluation | None = None
+
+
+class ExperimentSummary(BaseModel):
+    experiment_id: str
+    name: str
+    started_at: datetime
+    completed_at: datetime
+    method: HttpMethod
+    path: str
+    requests_per_phase: int
+    interval_ms: int
+    contract_passed: bool | None

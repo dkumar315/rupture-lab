@@ -74,3 +74,20 @@ def test_history_tables_reference_experiment_runs() -> None:
 
         assert len(foreign_keys) == 1
         assert next(iter(foreign_keys)).target_fullname == "experiment_runs.id"
+
+
+def test_app_lifespan_builds_database_repository() -> None:
+    from fastapi.testclient import TestClient
+
+    from rupturelab.main import create_app
+
+    app = create_app(
+        proxy_url="http://proxy",
+        database_url="sqlite+aiosqlite:///:memory:",
+    )
+
+    with TestClient(app) as client:
+        response = client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}

@@ -1,8 +1,70 @@
+from datetime import UTC, datetime
+from uuid import UUID, uuid4
+
 import httpx2
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from rupturelab.main import create_app
+from rupturelab.experiments.models import ExperimentResult, ExperimentSummary
+from rupturelab.main import create_app as build_app
+
+
+class MemoryExperimentStore:
+    def __init__(self) -> None:
+        self.results: dict[UUID, ExperimentResult] = {}
+        self.completed_at: dict[UUID, datetime] = {}
+
+    async def save(self, result: ExperimentResult) -> None:
+        experiment_id = UUID(result.experiment_id)
+        self.results[experiment_id] = result
+        self.completed_at[experiment_id] = datetime.now(UTC)
+
+    async def list_summaries(
+        self,
+        *,
+        limit: int,
+        offset: int,
+    ) -> list[ExperimentSummary]:
+        ordered = sorted(
+            self.results.items(),
+            key=lambda item: item[1].started_at,
+            reverse=True,
+        )
+
+        return [
+            ExperimentSummary(
+                experiment_id=str(experiment_id),
+                name=result.name,
+                started_at=datetime.fromisoformat(result.started_at),
+                completed_at=self.completed_at[experiment_id],
+                method=result.spec.method,
+                path=result.spec.path,
+                requests_per_phase=result.spec.requests_per_phase,
+                interval_ms=result.spec.interval_ms,
+                contract_passed=(
+                    result.contract_evaluation.passed
+                    if result.contract_evaluation is not None
+                    else None
+                ),
+            )
+            for experiment_id, result in ordered[offset : offset + limit]
+        ]
+
+    async def get(self, experiment_id: UUID) -> ExperimentResult | None:
+        return self.results.get(experiment_id)
+
+
+def create_test_app(
+    *,
+    proxy_url: str,
+    transport: httpx2.AsyncBaseTransport,
+) -> FastAPI:
+    return build_app(
+        proxy_url=proxy_url,
+        transport=transport,
+        experiment_store=MemoryExperimentStore(),
+    )
 
 
 class ScriptedProxyTransport(httpx2.AsyncBaseTransport):
@@ -75,7 +137,7 @@ class ScriptedProxyTransport(httpx2.AsyncBaseTransport):
 def test_experiment_runs_baseline_fault_and_recovery() -> None:
     transport = ScriptedProxyTransport()
 
-    app = create_app(
+    app = create_test_app(
         proxy_url="http://proxy",
         transport=transport,
     )
@@ -124,7 +186,7 @@ def test_experiment_runs_baseline_fault_and_recovery() -> None:
 def test_experiment_records_transport_errors() -> None:
     transport = ScriptedProxyTransport()
 
-    app = create_app(
+    app = create_test_app(
         proxy_url="http://proxy",
         transport=transport,
     )
@@ -161,7 +223,7 @@ def test_experiment_records_transport_errors() -> None:
 def test_experiment_rejects_control_namespace() -> None:
     transport = ScriptedProxyTransport()
 
-    app = create_app(
+    app = create_test_app(
         proxy_url="http://proxy",
         transport=transport,
     )
@@ -187,7 +249,7 @@ def test_experiment_rejects_control_namespace() -> None:
 def test_experiment_requires_enabled_fault() -> None:
     transport = ScriptedProxyTransport()
 
-    app = create_app(
+    app = create_test_app(
         proxy_url="http://proxy",
         transport=transport,
     )
@@ -321,7 +383,7 @@ def experiment_payload(
 
 
 def test_experiment_reports_rejected_fault_configuration() -> None:
-    app = create_app(
+    app = create_test_app(
         proxy_url="http://proxy",
         transport=RejectFaultTransport(),
     )
@@ -337,7 +399,7 @@ def test_experiment_reports_rejected_fault_configuration() -> None:
 
 
 def test_experiment_reports_fault_configuration_disconnect() -> None:
-    app = create_app(
+    app = create_test_app(
         proxy_url="http://proxy",
         transport=ConfigureDisconnectTransport(),
     )
@@ -353,7 +415,7 @@ def test_experiment_reports_fault_configuration_disconnect() -> None:
 
 
 def test_experiment_reports_initial_clear_disconnect() -> None:
-    app = create_app(
+    app = create_test_app(
         proxy_url="http://proxy",
         transport=ClearDisconnectTransport(),
     )
@@ -369,7 +431,7 @@ def test_experiment_reports_initial_clear_disconnect() -> None:
 
 
 def test_experiment_reports_failed_fault_cleanup() -> None:
-    app = create_app(
+    app = create_test_app(
         proxy_url="http://proxy",
         transport=FailedRecoveryClearTransport(),
     )
@@ -399,7 +461,7 @@ def test_experiment_waits_between_requests(
 
     transport = ScriptedProxyTransport()
 
-    app = create_app(
+    app = create_test_app(
         proxy_url="http://proxy",
         transport=transport,
     )
@@ -420,7 +482,7 @@ def test_experiment_waits_between_requests(
 def test_experiment_evaluates_resilience_contract() -> None:
     transport = ScriptedProxyTransport()
 
-    app = create_app(
+    app = create_test_app(
         proxy_url="http://proxy",
         transport=transport,
     )
@@ -475,7 +537,7 @@ def test_experiment_evaluates_resilience_contract() -> None:
 def test_experiment_without_contract_returns_no_evaluation() -> None:
     transport = ScriptedProxyTransport()
 
-    app = create_app(
+    app = create_test_app(
         proxy_url="http://proxy",
         transport=transport,
     )
@@ -497,7 +559,7 @@ def test_experiment_without_contract_returns_no_evaluation() -> None:
 def test_experiment_returns_failed_contract_evaluation() -> None:
     transport = ScriptedProxyTransport()
 
-    app = create_app(
+    app = create_test_app(
         proxy_url="http://proxy",
         transport=transport,
     )
@@ -535,3 +597,62 @@ def test_experiment_returns_failed_contract_evaluation() -> None:
     assert check["expected"] == 1.0
     assert check["observed"] == 0.0
     assert check["passed"] is False
+
+
+def test_experiment_history_endpoints() -> None:
+    transport = ScriptedProxyTransport()
+    store = MemoryExperimentStore()
+    app = build_app(
+        proxy_url="http://proxy",
+        transport=transport,
+        experiment_store=store,
+    )
+
+    with TestClient(app) as client:
+        run_response = client.post(
+            "/experiments/run",
+            json=experiment_payload(),
+        )
+
+        experiment_id = run_response.json()["experiment_id"]
+        list_response = client.get("/experiments?limit=1&offset=0")
+        get_response = client.get(f"/experiments/{experiment_id}")
+        missing_response = client.get(f"/experiments/{uuid4()}")
+
+    assert run_response.status_code == 200
+    assert list_response.status_code == 200
+    assert list_response.json()[0]["experiment_id"] == experiment_id
+    assert list_response.json()[0]["contract_passed"] is None
+    assert get_response.status_code == 200
+    assert get_response.json() == run_response.json()
+    assert missing_response.status_code == 404
+    assert missing_response.json() == {"detail": "Experiment not found"}
+
+
+def test_experiment_reports_busy_service(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    transport = ScriptedProxyTransport()
+    app = create_test_app(
+        proxy_url="http://proxy",
+        transport=transport,
+    )
+
+    async def reject_run(_: object) -> None:
+        from rupturelab.experiments.service import ExperimentBusyError
+
+        raise ExperimentBusyError("Another experiment is already running")
+
+    with TestClient(app) as client:
+        monkeypatch.setattr(
+            app.state.experiment_service,
+            "run",
+            reject_run,
+        )
+        response = client.post(
+            "/experiments/run",
+            json=experiment_payload(),
+        )
+
+    assert response.status_code == 409
+    assert response.json() == {"detail": "Another experiment is already running"}

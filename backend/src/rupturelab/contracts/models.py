@@ -33,7 +33,7 @@ class PhaseContract(BaseModel):
     )
 
     @model_validator(mode="after")
-    def require_at_least_one_check(self) -> "PhaseContract":
+    def require_at_least_one_check(self) -> PhaseContract:
         checks = (
             self.min_success_rate,
             self.max_p95_latency_ms,
@@ -54,7 +54,7 @@ class ResilienceContract(BaseModel):
     recovery: PhaseContract | None = None
 
     @model_validator(mode="after")
-    def require_at_least_one_phase(self) -> "ResilienceContract":
+    def require_at_least_one_phase(self) -> ResilienceContract:
         if self.baseline is None and self.fault is None and self.recovery is None:
             raise ValueError("A resilience contract must configure at least one phase")
 

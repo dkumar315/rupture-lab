@@ -23,7 +23,7 @@ class ExperimentSpec(BaseModel):
     contract: ResilienceContract | None = None
 
     @model_validator(mode="after")
-    def validate_spec(self) -> "ExperimentSpec":
+    def validate_spec(self) -> ExperimentSpec:
         if not self.path.startswith("/"):
             raise ValueError("path must start with '/'")
 

@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 
 const seededId = "11111111-1111-4111-8111-111111111111";
 const createdId = "22222222-2222-4222-8222-222222222222";
+const occurredAt = "2026-09-12T03:00:00+00:00";
 
 function spec(name = "Checkout resilience") {
   return {
@@ -108,12 +109,94 @@ function result(id, name) {
   };
 }
 
-function json(response, status = 200) {
+function events() {
+  const completed = result(createdId, "Search API recovery");
+  const values = [
+    {
+      type: "experiment.started",
+      name: completed.name,
+      requests_per_phase: 2,
+    },
+  ];
+
+  for (const phaseResult of completed.phases) {
+    values.push({
+      type: "phase.started",
+      phase: phaseResult.phase,
+      requests_per_phase: 2,
+    });
+
+    phaseResult.measurements.forEach((measurement, index) => {
+      values.push({
+        type: "request.completed",
+        phase: phaseResult.phase,
+        request_number: index + 1,
+        requests_per_phase: 2,
+        measurement,
+      });
+    });
+
+    values.push({
+      type: "phase.completed",
+      phase: phaseResult.phase,
+      phase_result: phaseResult,
+    });
+  }
+
+  values.push({
+    type: "contract.evaluated",
+    contract_evaluation: completed.contract_evaluation,
+  });
+  values.push({ type: "experiment.completed", result: completed });
+
+  return values.map((value, index) => ({
+    sequence: index + 1,
+    experiment_id: createdId,
+    occurred_at: occurredAt,
+    ...value,
+  }));
+}
+
+function json(payload, status = 200) {
   return {
     status,
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(response),
+    body: JSON.stringify(payload),
   };
+}
+
+function streamEvents(request, response) {
+  response.writeHead(200, {
+    "Cache-Control": "no-cache",
+    "Content-Type": "text/event-stream",
+    Connection: "keep-alive",
+  });
+
+  const lastEventId = Number(request.headers["last-event-id"] ?? 0);
+  const replay = events().filter((event) => event.sequence > lastEventId);
+  let index = 0;
+
+  response.write("retry: 100\n\n");
+
+  const timer = setInterval(() => {
+    const event = replay[index];
+    if (!event) {
+      clearInterval(timer);
+      response.end();
+      return;
+    }
+
+    response.write(`id: ${event.sequence}\n`);
+    response.write(`data: ${JSON.stringify(event)}\n\n`);
+    index += 1;
+
+    if (lastEventId === 0 && event.sequence === 5) {
+      clearInterval(timer);
+      response.end();
+    }
+  }, 90);
+
+  response.on("close", () => clearInterval(timer));
 }
 
 const server = createServer((request, response) => {
@@ -148,6 +231,20 @@ const server = createServer((request, response) => {
     request.url === `/experiments/${createdId}`
   ) {
     outgoing = json(result(createdId, "Search API recovery"));
+  } else if (
+    request.method === "GET" &&
+    request.url === `/experiments/${createdId}/events`
+  ) {
+    streamEvents(request, response);
+    return;
+  } else if (
+    request.method === "POST" &&
+    request.url === "/experiments/start"
+  ) {
+    outgoing = json(
+      { experiment_id: createdId, name: "Search API recovery" },
+      202,
+    );
   } else if (request.method === "POST" && request.url === "/experiments/run") {
     outgoing = json(result(createdId, "Search API recovery"));
   } else {

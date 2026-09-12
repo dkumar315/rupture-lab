@@ -656,3 +656,121 @@ def test_experiment_reports_busy_service(
 
     assert response.status_code == 409
     assert response.json() == {"detail": "Another experiment is already running"}
+
+
+def test_experiment_live_stream_replays_run_events_and_persists_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import json
+
+    transport = ScriptedProxyTransport()
+    store = MemoryExperimentStore()
+    app = build_app(
+        proxy_url="http://proxy",
+        transport=transport,
+        experiment_store=store,
+    )
+    monkeypatch.setattr(
+        "rupturelab.api.routes.experiments._EVENT_HEARTBEAT_SECONDS",
+        0.001,
+    )
+    payload = experiment_payload(requests_per_phase=2, interval_ms=10)
+    payload["contract"] = {
+        "name": "live-contract",
+        "baseline": {"min_success_rate": 1.0},
+        "fault": {"min_fault_rate": 1.0},
+        "recovery": {"min_success_rate": 1.0},
+    }
+
+    with TestClient(app) as client:
+        start_response = client.post("/experiments/start", json=payload)
+        assert start_response.status_code == 202
+        experiment_id = start_response.json()["experiment_id"]
+
+        with client.stream("GET", f"/experiments/{experiment_id}/events") as response:
+            assert response.status_code == 200
+            stream_lines = list(response.iter_lines())
+            lines = [line for line in stream_lines if line.startswith("data: ")]
+
+        assert ": keepalive" in stream_lines
+        events = [json.loads(line.removeprefix("data: ")) for line in lines]
+        event_types = [event["type"] for event in events]
+
+        assert [event["sequence"] for event in events] == list(range(1, len(events) + 1))
+        assert event_types[0] == "experiment.started"
+        assert event_types.count("phase.started") == 3
+        assert event_types.count("request.completed") == 6
+        assert event_types.count("phase.completed") == 3
+        assert event_types.count("contract.evaluated") == 1
+        assert event_types[-1] == "experiment.completed"
+
+        replay_response = client.get(
+            f"/experiments/{experiment_id}/events",
+            headers={"Last-Event-ID": str(events[-2]["sequence"])},
+        )
+        stored_response = client.get(f"/experiments/{experiment_id}")
+
+    replay_lines = [line for line in replay_response.text.splitlines() if line.startswith("data: ")]
+    replay = [json.loads(line.removeprefix("data: ")) for line in replay_lines]
+
+    assert len(replay) == 1
+    assert replay[0]["type"] == "experiment.completed"
+    assert stored_response.status_code == 200
+    assert stored_response.json()["experiment_id"] == experiment_id
+    assert len(store.results) == 1
+
+
+def test_experiment_event_stream_validates_resume_cursor_and_missing_stream() -> None:
+    app = create_test_app(
+        proxy_url="http://proxy",
+        transport=ScriptedProxyTransport(),
+    )
+
+    with TestClient(app) as client:
+        missing = client.get(f"/experiments/{uuid4()}/events")
+        started = client.post("/experiments/start", json=experiment_payload())
+        experiment_id = started.json()["experiment_id"]
+        invalid = client.get(
+            f"/experiments/{experiment_id}/events",
+            headers={"Last-Event-ID": "not-a-number"},
+        )
+        negative = client.get(
+            f"/experiments/{experiment_id}/events",
+            headers={"Last-Event-ID": "-1"},
+        )
+
+    assert missing.status_code == 404
+    assert missing.json() == {"detail": "Experiment event stream not found"}
+    assert invalid.status_code == 400
+    assert invalid.json() == {"detail": "Last-Event-ID must be an integer"}
+    assert negative.status_code == 400
+    assert negative.json() == {"detail": "Last-Event-ID must be non-negative"}
+
+
+def test_experiment_start_reports_busy_service(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    transport = ScriptedProxyTransport()
+    app = create_test_app(
+        proxy_url="http://proxy",
+        transport=transport,
+    )
+
+    async def reject_start(_: object) -> None:
+        from rupturelab.experiments.service import ExperimentBusyError
+
+        raise ExperimentBusyError("Another experiment is already running")
+
+    with TestClient(app) as client:
+        monkeypatch.setattr(
+            app.state.experiment_service,
+            "start",
+            reject_start,
+        )
+        response = client.post(
+            "/experiments/start",
+            json=experiment_payload(),
+        )
+
+    assert response.status_code == 409
+    assert response.json() == {"detail": "Another experiment is already running"}

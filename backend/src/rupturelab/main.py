@@ -53,6 +53,7 @@ def create_app(
         try:
             yield
         finally:
+            await app.state.experiment_service.close()
             await app.state.proxy_client.aclose()
 
             if database_engine is not None:

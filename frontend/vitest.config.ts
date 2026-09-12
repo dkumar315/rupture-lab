@@ -20,6 +20,7 @@ export default defineConfig({
         "src/lib/dashboard.ts",
         "src/lib/experiment.ts",
         "src/lib/format.ts",
+        "src/lib/live.ts",
       ],
       reporter: ["text", "html"],
       thresholds: {

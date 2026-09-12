@@ -34,13 +34,20 @@ test("runs an experiment and renders its persisted result", async ({
   await page.getByRole("button", { name: "Run resilience experiment" }).click();
 
   await expect(page).toHaveURL(
+    /\/experiments\/22222222-2222-4222-8222-222222222222\/live$/,
+  );
+  await expect(page.getByText("Live request feed")).toBeVisible();
+  await expect(page.getByText("Fault applied")).toBeVisible();
+  await expect(page.getByText("Live", { exact: true })).toBeVisible();
+  await screenshot(page, "stage8-live");
+
+  await expect(page).toHaveURL(
     /\/experiments\/22222222-2222-4222-8222-222222222222$/,
   );
   await expect(
     page.getByRole("heading", { name: "Search API recovery" }),
   ).toBeVisible();
   await expect(page.getByText("Contract passed")).toBeVisible();
-  await expect(page.getByText("Fault applied")).toBeVisible();
 
   await screenshot(page, "stage7-result");
 });

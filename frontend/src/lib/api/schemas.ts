@@ -99,6 +99,61 @@ export const experimentResultSchema = z.object({
   contract_evaluation: contractEvaluationSchema.nullable(),
 });
 
+export const experimentStartSchema = z.object({
+  experiment_id: z.string().uuid(),
+  name: z.string(),
+});
+
+const experimentEventBase = {
+  sequence: z.number().int().positive(),
+  experiment_id: z.string().uuid(),
+  occurred_at: z.string(),
+};
+
+export const experimentEventSchema = z.discriminatedUnion("type", [
+  z.object({
+    ...experimentEventBase,
+    type: z.literal("experiment.started"),
+    name: z.string(),
+    requests_per_phase: z.number().int().positive(),
+  }),
+  z.object({
+    ...experimentEventBase,
+    type: z.literal("phase.started"),
+    phase: phaseNameSchema,
+    requests_per_phase: z.number().int().positive(),
+  }),
+  z.object({
+    ...experimentEventBase,
+    type: z.literal("request.completed"),
+    phase: phaseNameSchema,
+    request_number: z.number().int().positive(),
+    requests_per_phase: z.number().int().positive(),
+    measurement: requestMeasurementSchema,
+  }),
+  z.object({
+    ...experimentEventBase,
+    type: z.literal("phase.completed"),
+    phase: phaseNameSchema,
+    phase_result: phaseResultSchema,
+  }),
+  z.object({
+    ...experimentEventBase,
+    type: z.literal("contract.evaluated"),
+    contract_evaluation: contractEvaluationSchema,
+  }),
+  z.object({
+    ...experimentEventBase,
+    type: z.literal("experiment.completed"),
+    result: experimentResultSchema,
+  }),
+  z.object({
+    ...experimentEventBase,
+    type: z.literal("experiment.failed"),
+    message: z.string(),
+  }),
+]);
+
 export const experimentSummarySchema = z.object({
   experiment_id: z.string().uuid(),
   name: z.string(),
@@ -119,7 +174,11 @@ export type PhaseName = z.infer<typeof phaseNameSchema>;
 export type FaultProfile = z.infer<typeof faultProfileSchema>;
 export type ResilienceContract = z.infer<typeof resilienceContractSchema>;
 export type ExperimentSpec = z.infer<typeof experimentSpecSchema>;
+export type RequestMeasurement = z.infer<typeof requestMeasurementSchema>;
 export type PhaseResult = z.infer<typeof phaseResultSchema>;
 export type ExperimentResult = z.infer<typeof experimentResultSchema>;
 export type ExperimentSummary = z.infer<typeof experimentSummarySchema>;
+export type ExperimentStart = z.infer<typeof experimentStartSchema>;
+export type ExperimentEvent = z.infer<typeof experimentEventSchema>;
 export type ContractCheck = z.infer<typeof contractCheckSchema>;
+export type ContractEvaluation = z.infer<typeof contractEvaluationSchema>;

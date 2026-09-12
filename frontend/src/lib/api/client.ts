@@ -2,10 +2,12 @@ import type { ZodType } from "zod";
 
 import {
   experimentResultSchema,
+  experimentStartSchema,
   experimentSummaryListSchema,
   healthSchema,
   type ExperimentResult,
   type ExperimentSpec,
+  type ExperimentStart,
   type ExperimentSummary,
 } from "@/lib/api/schemas";
 
@@ -96,4 +98,44 @@ export function runExperiment(spec: ExperimentSpec): Promise<ExperimentResult> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(spec),
   });
+}
+
+export function startExperiment(
+  spec: ExperimentSpec,
+): Promise<ExperimentStart> {
+  return request("/experiments/start", experimentStartSchema, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(spec),
+  });
+}
+
+export async function openExperimentEventStream(
+  experimentId: string,
+  lastEventId?: string,
+  signal?: AbortSignal,
+): Promise<Response> {
+  let response: Response;
+
+  try {
+    response = await fetch(backendUrl(`/experiments/${experimentId}/events`), {
+      cache: "no-store",
+      headers: {
+        Accept: "text/event-stream",
+        ...(lastEventId ? { "Last-Event-ID": lastEventId } : {}),
+      },
+      ...(signal ? { signal } : {}),
+    });
+  } catch (error) {
+    throw new ApiError(
+      error instanceof Error ? error.message : "RuptureLab API is unavailable",
+      503,
+    );
+  }
+
+  if (!response.ok) {
+    throw new ApiError(await readError(response), response.status);
+  }
+
+  return response;
 }

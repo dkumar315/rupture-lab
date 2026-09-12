@@ -4,7 +4,9 @@ import {
   getExperiment,
   getHealth,
   listExperiments,
+  openExperimentEventStream,
   runExperiment,
+  startExperiment,
 } from "@/lib/api/client";
 import {
   buildExperimentSpec,
@@ -60,6 +62,80 @@ describe("API client", () => {
         method: "POST",
         body: JSON.stringify(result.spec),
       }),
+    );
+  });
+
+  it("starts experiments and opens resumable event streams", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        response({ experiment_id: experimentId, name: result.name }, 202),
+      )
+      .mockResolvedValueOnce(
+        new Response("data: {}\n\n", {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response("data: {}\n\n", {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        }),
+      );
+
+    await expect(startExperiment(result.spec)).resolves.toEqual({
+      experiment_id: experimentId,
+      name: result.name,
+    });
+    await expect(
+      openExperimentEventStream(experimentId),
+    ).resolves.toBeInstanceOf(Response);
+    const controller = new AbortController();
+    await expect(
+      openExperimentEventStream(experimentId, "7", controller.signal),
+    ).resolves.toBeInstanceOf(Response);
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      `http://127.0.0.1:8000/experiments/${experimentId}/events`,
+      expect.objectContaining({
+        headers: { Accept: "text/event-stream" },
+      }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      `http://127.0.0.1:8000/experiments/${experimentId}/events`,
+      expect.objectContaining({
+        headers: { Accept: "text/event-stream", "Last-Event-ID": "7" },
+        signal: controller.signal,
+      }),
+    );
+  });
+
+  it("normalizes event stream HTTP and network failures", async () => {
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(response({ detail: "Stream missing" }, 404))
+      .mockRejectedValueOnce(new Error("stream disconnected"))
+      .mockRejectedValueOnce("offline");
+
+    await expect(openExperimentEventStream(experimentId)).rejects.toMatchObject(
+      {
+        message: "Stream missing",
+        status: 404,
+      },
+    );
+    await expect(openExperimentEventStream(experimentId)).rejects.toMatchObject(
+      {
+        message: "stream disconnected",
+        status: 503,
+      },
+    );
+    await expect(openExperimentEventStream(experimentId)).rejects.toMatchObject(
+      {
+        message: "RuptureLab API is unavailable",
+        status: 503,
+      },
     );
   });
 

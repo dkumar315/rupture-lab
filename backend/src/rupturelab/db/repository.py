@@ -2,7 +2,8 @@ from datetime import UTC, datetime
 from typing import cast
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from rupturelab.contracts.models import (
@@ -35,6 +36,15 @@ class ExperimentRepository:
         session_factory: async_sessionmaker[AsyncSession],
     ) -> None:
         self._session_factory = session_factory
+
+    async def ready(self) -> bool:
+        try:
+            async with self._session_factory() as session:
+                await session.execute(text("SELECT 1"))
+        except SQLAlchemyError:
+            return False
+
+        return True
 
     async def save(
         self,

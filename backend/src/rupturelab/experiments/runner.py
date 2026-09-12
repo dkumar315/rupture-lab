@@ -25,6 +25,14 @@ class ExperimentRunner:
     def __init__(self, client: httpx2.AsyncClient) -> None:
         self._client = client
 
+    async def ready(self) -> bool:
+        try:
+            response = await self._client.get("/_rupturelab/health")
+        except httpx2.RequestError:
+            return False
+
+        return response.status_code == 200
+
     async def run(
         self,
         spec: ExperimentSpec,

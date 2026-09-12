@@ -17,6 +17,8 @@ from rupturelab.experiments.runner import ExperimentControlError
 
 
 class ExperimentExecutor(Protocol):
+    async def ready(self) -> bool: ...
+
     async def run(
         self,
         spec: ExperimentSpec,
@@ -27,6 +29,8 @@ class ExperimentExecutor(Protocol):
 
 
 class ExperimentStore(Protocol):
+    async def ready(self) -> bool: ...
+
     async def save(self, result: ExperimentResult) -> None: ...
 
     async def list_summaries(
@@ -56,6 +60,16 @@ class ExperimentService:
         self._run_lock = asyncio.Lock()
         self._event_broker = event_broker or ExperimentEventBroker()
         self._tasks: set[asyncio.Task[None]] = set()
+
+    async def readiness(self) -> dict[str, bool]:
+        proxy_ready, database_ready = await asyncio.gather(
+            self._runner.ready(),
+            self._store.ready(),
+        )
+        return {
+            "database": database_ready,
+            "proxy": proxy_ready,
+        }
 
     async def run(self, spec: ExperimentSpec) -> ExperimentResult:
         if self._run_lock.locked():

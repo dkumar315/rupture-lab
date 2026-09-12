@@ -15,6 +15,9 @@ class MemoryExperimentStore:
         self.results: dict[UUID, ExperimentResult] = {}
         self.completed_at: dict[UUID, datetime] = {}
 
+    async def ready(self) -> bool:
+        return True
+
     async def save(self, result: ExperimentResult) -> None:
         experiment_id = UUID(result.experiment_id)
         self.results[experiment_id] = result
@@ -78,6 +81,9 @@ class ScriptedProxyTransport(httpx2.AsyncBaseTransport):
     ) -> httpx2.Response:
         path = request.url.path
 
+        if path == "/_rupturelab/health":
+            return httpx2.Response(200, json={"status": "ok"}, request=request)
+
         if path == "/_rupturelab/fault":
             if request.method == "PUT":
                 self.fault_enabled = True
@@ -132,6 +138,24 @@ class ScriptedProxyTransport(httpx2.AsyncBaseTransport):
 
     async def aclose(self) -> None:
         return None
+
+
+def test_readiness_reports_proxy_and_store_health() -> None:
+    transport = ScriptedProxyTransport()
+    app = create_test_app(
+        proxy_url="http://proxy",
+        transport=transport,
+    )
+
+    with TestClient(app) as client:
+        response = client.get("/ready")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "ready",
+        "database": "ok",
+        "proxy": "ok",
+    }
 
 
 def test_experiment_runs_baseline_fault_and_recovery() -> None:

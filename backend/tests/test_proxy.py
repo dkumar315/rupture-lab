@@ -154,3 +154,10 @@ def test_proxy_generated_response_headers_are_not_forwarded() -> None:
     assert "server" not in forwarded
     assert forwarded["content-type"] == "application/json"
     assert forwarded["x-demo-target"] == "rupturelab"
+
+
+def test_proxy_health_is_available(proxy_client: TestClient) -> None:
+    response = proxy_client.get("/_rupturelab/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}

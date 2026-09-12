@@ -168,3 +168,10 @@ def test_echo_get_reports_request_details() -> None:
         "trace_id": "trace-get-001",
         "body": None,
     }
+
+
+def test_demo_target_health_is_available() -> None:
+    response = client.get("/demo/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}

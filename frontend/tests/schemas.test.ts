@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { experimentSummarySchema, healthSchema } from "@/lib/api/schemas";
+import {
+  experimentEventSchema,
+  experimentSummarySchema,
+  healthSchema,
+} from "@/lib/api/schemas";
 
 describe("API schemas", () => {
   it("parses health and experiment summaries", () => {
@@ -19,4 +23,25 @@ describe("API schemas", () => {
       }).method,
     ).toBe("GET");
   });
+});
+
+it("validates live experiment events", () => {
+  const base = {
+    sequence: 1,
+    experiment_id: "11111111-1111-4111-8111-111111111111",
+    occurred_at: "2026-09-12T03:00:00Z",
+  };
+
+  expect(
+    experimentEventSchema.parse({
+      ...base,
+      type: "experiment.started",
+      name: "Live run",
+      requests_per_phase: 5,
+    }).type,
+  ).toBe("experiment.started");
+
+  expect(
+    experimentEventSchema.safeParse({ ...base, type: "unknown" }).success,
+  ).toBe(false);
 });

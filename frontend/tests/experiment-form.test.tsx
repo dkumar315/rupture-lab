@@ -26,12 +26,8 @@ describe("ExperimentForm", () => {
         JSON.stringify({
           experiment_id: experimentId,
           name: spec.name,
-          started_at: "2026-09-11T06:00:00Z",
-          spec,
-          phases: [],
-          contract_evaluation: null,
         }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
+        { status: 202, headers: { "Content-Type": "application/json" } },
       ),
     );
 
@@ -46,7 +42,7 @@ describe("ExperimentForm", () => {
     );
 
     await waitFor(() =>
-      expect(push).toHaveBeenCalledWith(`/experiments/${experimentId}`),
+      expect(push).toHaveBeenCalledWith(`/experiments/${experimentId}/live`),
     );
   });
 

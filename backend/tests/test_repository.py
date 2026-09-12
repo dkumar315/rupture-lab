@@ -310,3 +310,53 @@ def test_repository_orders_and_paginates_history() -> None:
         await engine.dispose()
 
     asyncio.run(exercise())
+
+
+def test_repository_reports_database_readiness() -> None:
+    async def exercise() -> None:
+        engine = create_database_engine("sqlite+aiosqlite:///:memory:")
+        repository = ExperimentRepository(create_session_factory(engine))
+
+        assert await repository.ready() is True
+
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_repository_reports_database_failure() -> None:
+    from typing import cast
+
+    from sqlalchemy.exc import SQLAlchemyError
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+    class FailingSession:
+        async def __aenter__(self) -> FailingSession:
+            return self
+
+        async def __aexit__(
+            self,
+            exc_type: object,
+            exc_value: object,
+            traceback: object,
+        ) -> None:
+            del exc_type, exc_value, traceback
+
+        async def execute(self, statement: object) -> None:
+            del statement
+            raise SQLAlchemyError("database unavailable")
+
+    class FailingSessionFactory:
+        def __call__(self) -> FailingSession:
+            return FailingSession()
+
+    async def exercise() -> None:
+        session_factory = cast(
+            async_sessionmaker[AsyncSession],
+            FailingSessionFactory(),
+        )
+        repository = ExperimentRepository(session_factory)
+
+        assert await repository.ready() is False
+
+    asyncio.run(exercise())

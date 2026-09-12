@@ -47,6 +47,9 @@ class ImmediateRunner:
     def __init__(self, result: ExperimentResult) -> None:
         self.result = result
 
+    async def ready(self) -> bool:
+        return True
+
     async def run(
         self,
         spec: ExperimentSpec,
@@ -70,6 +73,9 @@ class BlockingRunner:
         self.result = result
         self.started = asyncio.Event()
         self.release = asyncio.Event()
+
+    async def ready(self) -> bool:
+        return True
 
     async def run(
         self,
@@ -97,6 +103,9 @@ class RecordingStore:
         self.summary_calls: list[tuple[int, int]] = []
         self.result: ExperimentResult | None = None
 
+    async def ready(self) -> bool:
+        return True
+
     async def save(self, result: ExperimentResult) -> None:
         self.saved.append(result)
         self.result = result
@@ -115,6 +124,34 @@ class RecordingStore:
             return self.result
 
         return None
+
+
+def test_service_reports_dependency_readiness() -> None:
+    class UnreadyRunner(ImmediateRunner):
+        async def ready(self) -> bool:
+            return False
+
+    class UnreadyStore(RecordingStore):
+        async def ready(self) -> bool:
+            return False
+
+    async def exercise() -> None:
+        spec = experiment_spec()
+        result = experiment_result(spec)
+
+        ready_service = ExperimentService(ImmediateRunner(result), RecordingStore())
+        assert await ready_service.readiness() == {
+            "database": True,
+            "proxy": True,
+        }
+
+        unready_service = ExperimentService(UnreadyRunner(result), UnreadyStore())
+        assert await unready_service.readiness() == {
+            "database": False,
+            "proxy": False,
+        }
+
+    asyncio.run(exercise())
 
 
 def test_service_persists_completed_experiment() -> None:
@@ -270,6 +307,9 @@ def test_service_close_cancels_running_background_experiment() -> None:
 class FailingRunner:
     def __init__(self, error: Exception) -> None:
         self.error = error
+
+    async def ready(self) -> bool:
+        return True
 
     async def run(
         self,

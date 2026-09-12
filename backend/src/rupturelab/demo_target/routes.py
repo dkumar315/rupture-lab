@@ -15,6 +15,11 @@ from rupturelab.demo_target.store import store
 router = APIRouter(prefix="/demo", tags=["demo-target"])
 
 
+@router.get("/health")
+async def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
 @router.get("/products", response_model=list[Product])
 async def list_products() -> list[Product]:
     return store.list_products()

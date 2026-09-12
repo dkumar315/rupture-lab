@@ -11,6 +11,11 @@ router = APIRouter(
 )
 
 
+@router.get("/health")
+async def proxy_health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
 def get_fault_engine(request: Request) -> FaultEngine:
     return cast(
         FaultEngine,

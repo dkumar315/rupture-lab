@@ -67,6 +67,11 @@ class ExperimentResult(BaseModel):
     contract_evaluation: ContractEvaluation | None = None
 
 
+class ExperimentStart(BaseModel):
+    experiment_id: str
+    name: str
+
+
 class ExperimentSummary(BaseModel):
     experiment_id: str
     name: str

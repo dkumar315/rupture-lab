@@ -1,11 +1,12 @@
 import asyncio
 from datetime import UTC, datetime
 from time import perf_counter
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import httpx2
 
 from rupturelab.contracts.evaluator import evaluate_contract
+from rupturelab.experiments.events import ExperimentEventPublisher
 from rupturelab.experiments.metrics import summarize_phase
 from rupturelab.experiments.models import (
     ExperimentResult,
@@ -27,14 +28,19 @@ class ExperimentRunner:
     async def run(
         self,
         spec: ExperimentSpec,
+        *,
+        experiment_id: UUID | None = None,
+        publisher: ExperimentEventPublisher | None = None,
     ) -> ExperimentResult:
         started_at = datetime.now(UTC)
+        resolved_experiment_id = experiment_id or uuid4()
 
         await self._clear_fault()
 
         baseline = await self._run_phase(
             "baseline",
             spec,
+            publisher=publisher,
         )
 
         await self._configure_fault(spec)
@@ -43,6 +49,7 @@ class ExperimentRunner:
             fault = await self._run_phase(
                 "fault",
                 spec,
+                publisher=publisher,
             )
         finally:
             await self._clear_fault()
@@ -50,20 +57,19 @@ class ExperimentRunner:
         recovery = await self._run_phase(
             "recovery",
             spec,
+            publisher=publisher,
         )
 
-        phases = [
-            baseline,
-            fault,
-            recovery,
-        ]
-
+        phases = [baseline, fault, recovery]
         contract_evaluation = (
             evaluate_contract(spec.contract, phases) if spec.contract is not None else None
         )
 
+        if publisher is not None and contract_evaluation is not None:
+            await publisher.contract_evaluated(contract_evaluation)
+
         return ExperimentResult(
-            experiment_id=str(uuid4()),
+            experiment_id=str(resolved_experiment_id),
             name=spec.name,
             started_at=started_at.isoformat(),
             spec=spec,
@@ -75,19 +81,35 @@ class ExperimentRunner:
         self,
         phase: PhaseName,
         spec: ExperimentSpec,
+        *,
+        publisher: ExperimentEventPublisher | None,
     ) -> PhaseResult:
         measurements: list[RequestMeasurement] = []
 
+        if publisher is not None:
+            await publisher.phase_started(phase, spec.requests_per_phase)
+
         for index in range(spec.requests_per_phase):
-            measurements.append(await self._send_request(spec))
+            measurement = await self._send_request(spec)
+            measurements.append(measurement)
+
+            if publisher is not None:
+                await publisher.request_completed(
+                    phase,
+                    index + 1,
+                    spec.requests_per_phase,
+                    measurement,
+                )
 
             if spec.interval_ms > 0 and index < spec.requests_per_phase - 1:
                 await asyncio.sleep(spec.interval_ms / 1000)
 
-        return summarize_phase(
-            phase,
-            measurements,
-        )
+        result = summarize_phase(phase, measurements)
+
+        if publisher is not None:
+            await publisher.phase_completed(result)
+
+        return result
 
     async def _send_request(
         self,

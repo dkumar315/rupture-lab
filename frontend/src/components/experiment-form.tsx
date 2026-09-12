@@ -11,7 +11,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-import { experimentResultSchema, type HttpMethod } from "@/lib/api/schemas";
+import { experimentStartSchema, type HttpMethod } from "@/lib/api/schemas";
 import {
   buildExperimentSpec,
   defaultExperimentFormValues,
@@ -53,7 +53,7 @@ export function ExperimentForm() {
 
     try {
       const spec = buildExperimentSpec(values);
-      const response = await fetch("/api/experiments/run", {
+      const response = await fetch("/api/experiments/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(spec),
@@ -69,8 +69,8 @@ export function ExperimentForm() {
         throw new Error(detail);
       }
 
-      const result = experimentResultSchema.parse(payload);
-      router.push(`/experiments/${result.experiment_id}` as Route);
+      const started = experimentStartSchema.parse(payload);
+      router.push(`/experiments/${started.experiment_id}/live` as Route);
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : "Unable to run experiment",

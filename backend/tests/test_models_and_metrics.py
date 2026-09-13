@@ -36,6 +36,23 @@ def test_experiment_path_requires_leading_slash() -> None:
         )
 
 
+def test_experiment_fault_prefix_is_normalized_to_request_path() -> None:
+    spec = ExperimentSpec(
+        name="query-target",
+        path="/demo/products?tag=one",
+        fault=FaultProfile(
+            enabled=True,
+            path_prefix="/ignored",
+            methods=["POST"],
+            error_status=503,
+        ),
+    )
+
+    assert spec.path == "/demo/products?tag=one"
+    assert spec.fault.path_prefix == "/demo/products"
+    assert spec.fault.methods == ["GET"]
+
+
 def test_fault_path_prefix_requires_leading_slash() -> None:
     with pytest.raises(ValidationError):
         FaultProfile(

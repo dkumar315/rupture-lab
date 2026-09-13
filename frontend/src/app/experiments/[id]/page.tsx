@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Clock3, Copy, Route } from "lucide-react";
+import { ArrowLeft, Clock3, Hash, Route, type LucideIcon } from "lucide-react";
 
 import { ContractPanel } from "@/components/contract-panel";
 import { MeasurementTable } from "@/components/measurement-table";
@@ -51,7 +51,7 @@ export default async function ExperimentPage({ params }: ExperimentPageProps) {
         action={
           <Link
             href="/experiments/new"
-            className="rounded-xl border border-white/8 bg-white/[0.035] px-4 py-2.5 text-sm font-semibold text-zinc-300 transition hover:bg-white/[0.06] hover:text-white"
+            className="rounded-xl border border-white/8 bg-white/[0.035] px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-zinc-300 transition hover:bg-white/[0.06] hover:text-white"
           >
             Run another
           </Link>
@@ -60,7 +60,7 @@ export default async function ExperimentPage({ params }: ExperimentPageProps) {
 
       <section className="grid gap-3 rounded-2xl border border-white/6 bg-white/[0.02] p-4 sm:grid-cols-3 sm:p-5">
         <ResultMeta
-          icon={Copy}
+          icon={Hash}
           label="Experiment ID"
           value={result.experiment_id}
           mono
@@ -104,7 +104,7 @@ function ResultMeta({
   value,
   mono = false,
 }: {
-  icon: typeof Copy;
+  icon: LucideIcon;
   label: string;
   value: string;
   mono?: boolean;

@@ -244,7 +244,7 @@ def test_experiment_records_transport_errors() -> None:
         assert phase["measurements"][0]["error"] == "ConnectError"
 
 
-def test_experiment_rejects_control_namespace() -> None:
+def test_experiment_rejects_unsafe_request_targets() -> None:
     transport = ScriptedProxyTransport()
 
     app = create_test_app(
@@ -253,21 +253,22 @@ def test_experiment_rejects_control_namespace() -> None:
     )
 
     with TestClient(app) as client:
-        response = client.post(
-            "/experiments/run",
-            json={
-                "name": "invalid-target",
-                "method": "GET",
-                "path": "/_rupturelab/fault",
-                "requests_per_phase": 1,
-                "fault": {
-                    "enabled": True,
-                    "error_status": 503,
+        for path in ["/_rupturelab/fault", "//example.com/products"]:
+            response = client.post(
+                "/experiments/run",
+                json={
+                    "name": "invalid-target",
+                    "method": "GET",
+                    "path": path,
+                    "requests_per_phase": 1,
+                    "fault": {
+                        "enabled": True,
+                        "error_status": 503,
+                    },
                 },
-            },
-        )
+            )
 
-    assert response.status_code == 422
+            assert response.status_code == 422
 
 
 def test_experiment_requires_enabled_fault() -> None:

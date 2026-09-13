@@ -38,7 +38,7 @@ function phaseResult(): PhaseResult {
     faulted_requests: 0,
     status_codes: { "200": 2 },
     average_latency_ms: 7,
-    p95_latency_ms: 8,
+    p95_latency_ms: 9,
     measurements: [measurement(), measurement({ duration_ms: 6 })],
   };
 }
@@ -136,7 +136,7 @@ describe("live experiment reducer", () => {
       successfulRequests: 1,
       faultedRequests: 1,
       transportErrors: 1,
-      latestLatencyMs: 8,
+      latencyMs: 8,
     });
     expect(state.recentRequests.map((item) => item.outcome)).toEqual([
       "http-error",
@@ -217,7 +217,7 @@ describe("live experiment reducer", () => {
       status: "completed",
       completedRequests: 2,
       successfulRequests: 2,
-      latestLatencyMs: 8,
+      latencyMs: 9,
       result: phase,
     });
     expect(state.contractEvaluation?.passed).toBe(true);

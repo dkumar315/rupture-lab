@@ -10,6 +10,7 @@ from rupturelab.proxy.headers import (
     build_downstream_headers,
     build_upstream_headers,
 )
+from rupturelab.request_targets import local_request_path
 
 router = APIRouter()
 
@@ -64,9 +65,19 @@ async def forward_request(
     client: httpx2.AsyncClient = request.app.state.upstream_client
     engine: FaultEngine = request.app.state.fault_engine
 
+    try:
+        raw_path = request.scope.get("raw_path")
+        request_path = raw_path.decode("ascii") if isinstance(raw_path, bytes) else request.url.path
+        upstream_path = local_request_path(request_path)
+    except UnicodeDecodeError, ValueError:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": "Invalid upstream request path"},
+        )
+
     profile = engine.match(
         request.method,
-        request.url.path,
+        upstream_path,
     )
 
     if profile is not None and profile.latency_ms > 0:
@@ -89,7 +100,7 @@ async def forward_request(
     try:
         upstream = await client.request(
             method=request.method,
-            url=request.url.path,
+            url=upstream_path,
             params=request.url.query,
             headers=build_upstream_headers(request.headers),
             content=body,

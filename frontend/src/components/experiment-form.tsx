@@ -136,6 +136,7 @@ export function ExperimentForm() {
               <input
                 className={`${inputClass} font-mono`}
                 value={values.path}
+                maxLength={2048}
                 required
                 onChange={(event) => update("path", event.target.value)}
               />
@@ -186,7 +187,7 @@ export function ExperimentForm() {
                 <textarea
                   className={`${inputClass} min-h-28 resize-y font-mono text-xs leading-5`}
                   value={values.headersJson}
-                  placeholder={'{"Authorization": "Bearer …"}'}
+                  placeholder={'{"X-Demo-Mode": "checkout"}'}
                   onChange={(event) =>
                     update("headersJson", event.target.value)
                   }
@@ -202,6 +203,10 @@ export function ExperimentForm() {
                 />
               </label>
             </div>
+            <p className="mt-4 text-[11px] leading-5 text-zinc-600">
+              Completed runs persist request headers and bodies. Use synthetic
+              values only; never enter real secrets or credentials.
+            </p>
           </details>
         </section>
 
@@ -334,6 +339,7 @@ export function ExperimentForm() {
               type="button"
               role="switch"
               aria-checked={values.contractEnabled}
+              aria-label="Enable resilience contract"
               onClick={() => update("contractEnabled", !values.contractEnabled)}
               className={`relative h-5 w-9 rounded-full transition ${values.contractEnabled ? "bg-emerald-400/70" : "bg-zinc-800"}`}
             >
@@ -356,7 +362,7 @@ export function ExperimentForm() {
                 onChange={(value) => update("baselineMinSuccessRate", value)}
               />
               <RateInput
-                label="Fault injection ≥"
+                label="Fault rate ≥"
                 value={values.faultMinFaultRate}
                 onChange={(value) => update("faultMinFaultRate", value)}
               />

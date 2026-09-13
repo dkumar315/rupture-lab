@@ -18,11 +18,23 @@ test("dashboard shows persisted experiment history", async ({ page }) => {
     page.getByRole("heading", { name: "Resilience, measured." }),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "Checkout resilience" }),
+    page.getByRole("link", {
+      name: "Checkout resilience",
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(page.getByText("Connected")).toBeVisible();
 
   await screenshot(page, "overview");
+
+  await page.setViewportSize({ width: 834, height: 1112 });
+  await expect(page.locator("table")).toBeHidden();
+  await expect(
+    page.getByRole("link", { name: /Checkout resilience/ }).first(),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(834);
 });
 
 test("runs an experiment and renders its persisted result", async ({
@@ -70,4 +82,55 @@ test("experiment builder stays usable on a narrow viewport", async ({
   ).toBeVisible();
 
   await screenshot(page, "mobile-builder");
+
+  await page.getByLabel("Path").fill("//example.com/products");
+  await page.getByRole("button", { name: "Run resilience experiment" }).click();
+  await expect(
+    page.locator('div[role="alert"]').filter({ hasText: "single '/'" }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/experiments\/new$/);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(390);
+});
+
+test("result details stay readable on a narrow viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/experiments/11111111-1111-4111-8111-111111111111");
+
+  await expect(
+    page.getByRole("heading", { name: "Checkout resilience" }),
+  ).toBeVisible();
+  const faultOutcome = page.getByText("http-error", { exact: true }).first();
+  const faultMeasurement = faultOutcome.locator("..").locator("..");
+
+  await faultMeasurement.scrollIntoViewIfNeeded();
+  await expect(faultMeasurement).toBeInViewport();
+  await expect(
+    faultMeasurement.getByText("http-error", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    faultMeasurement.getByText("4.2 ms", { exact: true }),
+  ).toBeVisible();
+
+  const contractPassed = page.getByText("Contract passed");
+  await contractPassed.scrollIntoViewIfNeeded();
+  await expect(contractPassed).toBeInViewport();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(390);
+});
+
+test("not-found states distinguish pages from experiments", async ({
+  page,
+}) => {
+  await page.goto("/definitely-not-a-real-route");
+  await expect(
+    page.getByRole("heading", { name: "Page not found" }),
+  ).toBeVisible();
+
+  await page.goto("/experiments/33333333-3333-4333-8333-333333333333");
+  await expect(
+    page.getByRole("heading", { name: "Experiment not found" }),
+  ).toBeVisible();
 });

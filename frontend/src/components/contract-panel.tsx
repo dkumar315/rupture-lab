@@ -3,6 +3,10 @@ import { Check, Minus, X } from "lucide-react";
 import type { ExperimentResult } from "@/lib/api/schemas";
 import { formatMetricName, formatPercent } from "@/lib/format";
 
+function displayOperator(operator: string): string {
+  return operator === ">=" ? "≥" : "≤";
+}
+
 function displayValue(metric: string, value: number): string {
   if (metric === "success_rate" || metric === "fault_rate") {
     return formatPercent(value);
@@ -69,7 +73,7 @@ export function ContractPanel({ result }: { result: ExperimentResult }) {
                 {formatMetricName(check.metric)}
               </p>
               <p className="mt-1 text-[11px] text-zinc-500">
-                Expected {check.operator}{" "}
+                Expected {displayOperator(check.operator)}{" "}
                 {displayValue(check.metric, check.expected)} · observed{" "}
                 {displayValue(check.metric, check.observed)}
               </p>

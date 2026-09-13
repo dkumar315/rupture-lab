@@ -156,6 +156,20 @@ def test_proxy_generated_response_headers_are_not_forwarded() -> None:
     assert forwarded["x-demo-target"] == "rupturelab"
 
 
+def test_unsafe_paths_are_rejected_before_forwarding(
+    proxy_client: TestClient,
+) -> None:
+    for path in [
+        "/%2F%2Fexample.com/products",
+        "/demo/%3Fsegment",
+        "/demo/%23fragment",
+    ]:
+        response = proxy_client.get(path)
+
+        assert response.status_code == 400
+        assert response.json() == {"detail": "Invalid upstream request path"}
+
+
 def test_proxy_health_is_available(proxy_client: TestClient) -> None:
     response = proxy_client.get("/_rupturelab/health")
 

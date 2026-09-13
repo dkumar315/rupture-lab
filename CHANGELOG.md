@@ -11,6 +11,7 @@ First public release of RuptureLab.
 - request-level latency, status, transport-error, and injected-fault measurements
 - phase summaries with success/failure counts, fault counts, average latency, and p95 latency
 - declarative resilience contracts with persisted per-check outcomes
+- local request-target validation that prevents experiment paths from replacing the configured proxy authority
 
 ### Live dashboard
 
@@ -18,7 +19,8 @@ First public release of RuptureLab.
 - live baseline/fault/recovery progress over Server-Sent Events
 - sequenced event replay with `Last-Event-ID`
 - request-level live feed and automatic transition to persisted results
-- responsive desktop and mobile interface
+- responsive desktop, tablet, and mobile interface with narrow-screen history and request-trace layouts
+- distinct global and experiment-specific not-found states
 
 ### Persistence and runtime
 
@@ -29,9 +31,9 @@ First public release of RuptureLab.
 
 ### Quality gates
 
-- 87 backend tests with 100% line and branch coverage
-- 31 frontend unit/component tests with 100% statement, branch, function, and line coverage across project-owned frontend logic
-- 3 browser UI flows
+- 108 backend tests with 100% line and branch coverage
+- 53 frontend unit/component tests with 100% statement, branch, function, and line coverage across project-owned frontend logic
+- 5 browser UI flows
 - real Compose-backed Chromium system test
 - restart, persistence, concurrency, non-root, and recovery smoke checks
 - Ruff, strict mypy, ESLint, Prettier, TypeScript, Alembic verification, pip-audit, and npm audit in CI

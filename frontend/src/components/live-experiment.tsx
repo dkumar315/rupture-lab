@@ -12,13 +12,14 @@ import {
   TriangleAlert,
 } from "lucide-react";
 
+import { PageHeader } from "@/components/page-header";
 import { experimentEventSchema } from "@/lib/api/schemas";
+import { formatLatency } from "@/lib/format";
 import {
   applyExperimentEvent,
   createLiveExperimentState,
   type LivePhaseProgress,
 } from "@/lib/live";
-import { formatLatency } from "@/lib/format";
 
 const phaseMeta = {
   baseline: { label: "Baseline", accent: "text-blue-400", bar: "bg-blue-400" },
@@ -136,26 +137,17 @@ export function LiveExperiment({ experimentId }: { experimentId: string }) {
 
   return (
     <div className="space-y-8">
-      <header className="border-b border-white/6 pb-8">
-        <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-          <div>
-            <p className="font-mono text-[10px] font-semibold tracking-[0.18em] text-emerald-400 uppercase">
-              Live experiment
-            </p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-              {state.name ?? "Preparing resilience run…"}
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-500">
-              Watching measured traffic move through baseline, controlled
-              failure and recovery.
-            </p>
-          </div>
+      <PageHeader
+        eyebrow="Live experiment"
+        title={state.name ?? "Preparing resilience run…"}
+        description="Watching measured traffic move through baseline, controlled failure and recovery."
+        action={
           <ConnectionState
             state={connection}
             failed={state.status === "failed"}
           />
-        </div>
-      </header>
+        }
+      />
 
       <section className="grid gap-4 lg:grid-cols-3">
         {(Object.keys(phaseMeta) as Array<keyof typeof phaseMeta>).map(
@@ -300,11 +292,13 @@ function LivePhaseCard({
           value={String(progress.successfulRequests)}
         />
         <LiveMetric
-          label="Latency"
+          label={
+            progress.status === "completed" ? "P95 latency" : "Latest latency"
+          }
           value={
-            progress.latestLatencyMs === null
+            progress.latencyMs === null
               ? "—"
-              : formatLatency(progress.latestLatencyMs)
+              : formatLatency(progress.latencyMs)
           }
         />
       </div>
@@ -326,7 +320,7 @@ function LivePhaseCard({
 function LiveMetric({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-[10px] font-semibold tracking-wide text-zinc-600 uppercase">
+      <p className="text-[10px] font-semibold tracking-wide whitespace-nowrap text-zinc-600 uppercase">
         {label}
       </p>
       <p className="mt-1.5 font-mono text-sm font-semibold text-zinc-200">

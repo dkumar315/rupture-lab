@@ -8,6 +8,7 @@ from rupturelab.contracts.models import (
     ResilienceContract,
 )
 from rupturelab.faults.models import FaultProfile, HttpMethod
+from rupturelab.request_targets import local_request_path
 
 PhaseName = Literal["baseline", "fault", "recovery"]
 
@@ -15,7 +16,7 @@ PhaseName = Literal["baseline", "fault", "recovery"]
 class ExperimentSpec(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     method: HttpMethod = "GET"
-    path: str
+    path: str = Field(min_length=1, max_length=2048)
     requests_per_phase: int = Field(default=5, ge=1, le=100)
     interval_ms: int = Field(default=0, ge=0, le=5000)
     headers: dict[str, str] = Field(default_factory=dict)
@@ -25,14 +26,13 @@ class ExperimentSpec(BaseModel):
 
     @model_validator(mode="after")
     def validate_spec(self) -> ExperimentSpec:
-        if not self.path.startswith("/"):
-            raise ValueError("path must start with '/'")
-
-        if self.path.startswith("/_rupturelab"):
-            raise ValueError("Experiments cannot target the RuptureLab control namespace")
+        target_path = local_request_path(self.path)
 
         if not self.fault.enabled:
             raise ValueError("Experiment fault profile must be enabled")
+
+        self.fault.path_prefix = target_path
+        self.fault.methods = [self.method]
 
         return self
 

@@ -31,7 +31,7 @@ export default async function DashboardPage() {
         action={
           <Link
             href="/experiments/new"
-            className="inline-flex items-center gap-2 rounded-xl bg-emerald-400 px-4 py-2.5 text-sm font-semibold text-zinc-950 shadow-[0_14px_35px_rgba(52,211,153,0.12)] transition hover:bg-emerald-300"
+            className="inline-flex items-center gap-2 rounded-xl bg-emerald-400 px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-zinc-950 shadow-[0_14px_35px_rgba(52,211,153,0.12)] transition hover:bg-emerald-300"
           >
             New experiment <ArrowRight className="h-4 w-4" />
           </Link>

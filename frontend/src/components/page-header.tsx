@@ -22,7 +22,7 @@ export function PageHeader({
           {description}
         </p>
       </div>
-      {action}
+      {action ? <div className="shrink-0">{action}</div> : null}
     </div>
   );
 }

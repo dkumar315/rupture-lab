@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { SearchX } from "lucide-react";
 
-export default function NotFound() {
+export default function ExperimentNotFound() {
   return (
     <div className="flex min-h-[65vh] items-center justify-center">
       <div className="max-w-md text-center">
@@ -9,11 +9,10 @@ export default function NotFound() {
           <SearchX className="h-5 w-5 text-zinc-500" />
         </div>
         <h1 className="mt-5 text-xl font-semibold text-zinc-200">
-          Page not found
+          Experiment not found
         </h1>
         <p className="mt-2 text-sm leading-6 text-zinc-500">
-          The requested RuptureLab page does not exist or is no longer
-          available.
+          The persisted experiment ID does not exist or is no longer available.
         </p>
         <Link
           href="/"

@@ -20,6 +20,7 @@ No real credentials should be committed to the repository.
 - `.env.example` contains names only, not usable secrets.
 - The local quick start generates a random PostgreSQL credential.
 - System CI generates an ephemeral database credential at runtime.
+- Completed experiment specifications persist request headers and JSON bodies. Use synthetic values only; do not enter real authorization tokens, cookies, credentials, or sensitive payloads.
 
 If a real secret is committed accidentally, revoke or rotate it first, remove it from source, and rewrite affected Git history before treating the incident as resolved.
 

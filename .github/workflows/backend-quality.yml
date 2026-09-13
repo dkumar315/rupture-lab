@@ -15,7 +15,7 @@ jobs:
         image: postgres:18.6
         env:
           POSTGRES_USER: rupturelab
-          POSTGRES_PASSWORD: rupturelab
+          POSTGRES_HOST_AUTH_METHOD: trust
           POSTGRES_DB: rupturelab
         ports:
           - 5432:5432
@@ -26,7 +26,7 @@ jobs:
           --health-retries 10
 
     env:
-      RUPTURELAB_DATABASE_URL: postgresql+asyncpg://rupturelab:rupturelab@127.0.0.1:5432/rupturelab
+      RUPTURELAB_DATABASE_URL: postgresql+asyncpg://rupturelab@127.0.0.1:5432/rupturelab
 
     defaults:
       run:

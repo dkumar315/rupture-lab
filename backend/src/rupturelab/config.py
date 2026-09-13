@@ -14,7 +14,7 @@ class Settings(BaseSettings):
 
     proxy_url: str = "http://127.0.0.1:8080"
     experiment_timeout_seconds: float = Field(default=10.0, gt=0, le=300)
-    database_url: str = "postgresql+asyncpg://rupturelab:rupturelab@127.0.0.1:5432/rupturelab"
+    database_url: str = "postgresql+asyncpg://rupturelab@127.0.0.1:5432/rupturelab"
 
     model_config = SettingsConfigDict(
         env_file=".env",

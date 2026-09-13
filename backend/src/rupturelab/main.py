@@ -5,6 +5,7 @@ import httpx2
 from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from rupturelab import __version__
 from rupturelab.api.routes.experiments import router as experiments_router
 from rupturelab.api.routes.system import router as system_router
 from rupturelab.config import get_settings
@@ -61,7 +62,7 @@ def create_app(
 
     app = FastAPI(
         title=settings.app_name,
-        version="0.1.0",
+        version=__version__,
         lifespan=lifespan,
     )
 

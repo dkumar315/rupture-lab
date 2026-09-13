@@ -22,7 +22,7 @@ test("dashboard shows persisted experiment history", async ({ page }) => {
   ).toBeVisible();
   await expect(page.getByText("Connected")).toBeVisible();
 
-  await screenshot(page, "stage7-overview");
+  await screenshot(page, "overview");
 });
 
 test("runs an experiment and renders its persisted result", async ({
@@ -39,7 +39,8 @@ test("runs an experiment and renders its persisted result", async ({
   await expect(page.getByText("Live request feed")).toBeVisible();
   await expect(page.getByText("Fault applied")).toBeVisible();
   await expect(page.getByText("Live", { exact: true })).toBeVisible();
-  await screenshot(page, "stage8-live");
+  await expect(page.getByText("200 · success").first()).toBeVisible();
+  await screenshot(page, "live-experiment");
 
   await expect(page).toHaveURL(
     /\/experiments\/22222222-2222-4222-8222-222222222222$/,
@@ -49,7 +50,7 @@ test("runs an experiment and renders its persisted result", async ({
   ).toBeVisible();
   await expect(page.getByText("Contract passed")).toBeVisible();
 
-  await screenshot(page, "stage7-result");
+  await screenshot(page, "result");
 });
 
 test("experiment builder stays usable on a narrow viewport", async ({
@@ -68,5 +69,5 @@ test("experiment builder stays usable on a narrow viewport", async ({
     page.getByRole("button", { name: "Run resilience experiment" }),
   ).toBeVisible();
 
-  await screenshot(page, "stage7-mobile");
+  await screenshot(page, "mobile-builder");
 });

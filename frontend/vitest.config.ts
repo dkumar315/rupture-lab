@@ -21,6 +21,7 @@ export default defineConfig({
         "src/lib/experiment.ts",
         "src/lib/format.ts",
         "src/lib/live.ts",
+        "src/lib/request-target.ts",
       ],
       reporter: ["text", "html"],
       thresholds: {

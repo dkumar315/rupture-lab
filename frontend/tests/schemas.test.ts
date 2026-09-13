@@ -4,6 +4,7 @@ import {
   experimentEventSchema,
   experimentSummarySchema,
   healthSchema,
+  requestTargetSchema,
 } from "@/lib/api/schemas";
 
 describe("API schemas", () => {
@@ -22,6 +23,12 @@ describe("API schemas", () => {
         contract_passed: true,
       }).method,
     ).toBe("GET");
+  });
+
+  it("rejects unsafe request targets at the API boundary", () => {
+    expect(
+      requestTargetSchema.safeParse("//example.com/products").success,
+    ).toBe(false);
   });
 });
 

@@ -104,7 +104,7 @@ The fault profile is cleared before baseline and again in a `finally` path after
 
 ### Fault proxy
 
-The proxy forwards ordinary HTTP methods to the configured upstream target and reserves `/_rupturelab/*` for its own control plane. Experiment specifications are prevented from targeting that namespace.
+The proxy forwards ordinary HTTP methods to the configured upstream target and reserves `/_rupturelab/*` for its own control plane. Experiment request targets are restricted to local origin-form paths so a run cannot replace the configured proxy authority. Query strings are supported, while authority-like paths, fragments, dot segments, ambiguous escaping, and the reserved control namespace are rejected. The experiment model also normalizes fault matching to the decoded request path and the selected request method so query-bearing targets still receive the intended fault. The proxy repeats the local-path validation before forwarding as a defense-in-depth boundary.
 
 A `FaultProfile` can match by path prefix, method, and probability. It can then apply added latency plus at most one terminal fault:
 
@@ -158,7 +158,7 @@ Every request records:
 
 Each phase then derives request count, successful/failed requests, transport errors, faulted requests, status-code counts, average latency, and p95 latency.
 
-A resilience contract may define checks independently for baseline, fault, and recovery. Supported metrics are success rate, p95 latency, transport errors, and injected-fault rate. Every check is stored with its expected value, observed value, comparison operator, and pass/fail outcome.
+A resilience contract may define checks independently for baseline, fault, and recovery. Supported metrics are success rate, p95 latency, transport errors, and fault rate. Every check is stored with its expected value, observed value, comparison operator, and pass/fail outcome.
 
 ## Persistence model
 
@@ -171,7 +171,7 @@ experiment_runs
 └── contract_checks        one row per configured contract assertion
 ```
 
-The original validated experiment specification is also stored with the run so a persisted result can reconstruct the exact fault and contract configuration.
+The original validated experiment specification is also stored with the run so a persisted result can reconstruct the exact request, fault, and contract configuration. That includes request headers and JSON bodies, so the workbench is intended for synthetic test data rather than real secrets or sensitive payloads.
 
 Alembic owns schema migration. In Compose, the control API runs `alembic upgrade head` before starting Uvicorn.
 

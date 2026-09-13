@@ -5,6 +5,7 @@ import {
   type ExperimentSpec,
   type HttpMethod,
 } from "@/lib/api/schemas";
+import { localRequestPath } from "@/lib/request-target";
 
 export type FaultOutcome = "none" | "http-error" | "timeout" | "malformed-json";
 
@@ -83,6 +84,7 @@ export function buildExperimentSpec(
     );
   }
 
+  const targetPath = localRequestPath(values.path);
   const headers =
     parseJsonObject(values.headersJson, "Headers", headersSchema) ?? {};
   const body =
@@ -90,7 +92,7 @@ export function buildExperimentSpec(
 
   const fault = {
     enabled: true,
-    path_prefix: values.path,
+    path_prefix: targetPath,
     methods: [values.method],
     probability: values.probability,
     latency_ms: values.latencyMs,

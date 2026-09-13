@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { localRequestPath } from "@/lib/request-target";
+
 export const httpMethodSchema = z.enum([
   "GET",
   "POST",
@@ -11,6 +13,21 @@ export const httpMethodSchema = z.enum([
 ]);
 
 export const phaseNameSchema = z.enum(["baseline", "fault", "recovery"]);
+
+export const requestTargetSchema = z
+  .string()
+  .min(1)
+  .max(2048)
+  .superRefine((value, context) => {
+    try {
+      localRequestPath(value);
+    } catch {
+      context.addIssue({
+        code: "custom",
+        message: "Invalid local request path",
+      });
+    }
+  });
 
 export const faultProfileSchema = z.object({
   enabled: z.boolean(),
@@ -40,7 +57,7 @@ export const resilienceContractSchema = z.object({
 export const experimentSpecSchema = z.object({
   name: z.string(),
   method: httpMethodSchema,
-  path: z.string(),
+  path: requestTargetSchema,
   requests_per_phase: z.number(),
   interval_ms: z.number(),
   headers: z.record(z.string(), z.string()),

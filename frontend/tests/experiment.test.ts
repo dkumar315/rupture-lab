@@ -34,6 +34,15 @@ describe("buildExperimentSpec", () => {
     ).toBeNull();
   });
 
+  it("normalizes the fault prefix when the request target has a query", () => {
+    const spec = buildExperimentSpec(
+      values({ path: "/demo/%70roducts?tag=one&tag=two" }),
+    );
+
+    expect(spec.path).toBe("/demo/%70roducts?tag=one&tag=two");
+    expect(spec.fault.path_prefix).toBe("/demo/products");
+  });
+
   it("parses optional headers and request bodies", () => {
     const spec = buildExperimentSpec(
       values({

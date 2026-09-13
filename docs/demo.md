@@ -40,7 +40,7 @@ Injection probability: 100%
 HTTP status: 503
 
 Baseline minimum success rate: 100%
-Fault minimum fault rate: 100%
+Minimum fault rate: 100%
 Recovery minimum success rate: 100%
 ```
 

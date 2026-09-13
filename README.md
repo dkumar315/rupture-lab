@@ -100,9 +100,9 @@ GET /demo/products
 5 requests per phase
 100 ms between requests
 100% HTTP 503 fault injection
-baseline success >= 100%
-fault injection >= 100%
-recovery success >= 100%
+baseline success ≥ 100%
+fault rate ≥ 100%
+recovery success ≥ 100%
 ```
 
 That produces 15 measured requests across baseline, fault, and recovery and a three-check contract evaluation.
@@ -118,7 +118,7 @@ For a short product walkthrough, see [docs/demo.md](docs/demo.md).
 | Timeout | Lets the upstream process the request, then delays and returns HTTP 504 |
 | Malformed JSON | Forwards upstream processing, then replaces the response body with malformed JSON |
 
-Fault profiles also support HTTP method filters, path-prefix matching, probability from `0.0` to `1.0`, and up to 30 seconds of configured latency/timeout delay.
+Fault profiles also support HTTP method filters, path-prefix matching, probability from `0.0` to `1.0`, and up to 30 seconds of configured latency/timeout delay. Experiment request targets must stay on the configured proxy origin; query strings are supported, while authority-like paths, fragments, dot segments, and the reserved `/_rupturelab` control namespace are rejected.
 
 ## Resilience contracts
 
@@ -126,10 +126,10 @@ Contracts are phase-specific and may combine any of these checks:
 
 | Check | Operator |
 | --- | --- |
-| Minimum success rate | `>=` |
-| Maximum p95 latency | `<=` |
-| Maximum transport errors | `<=` |
-| Minimum injected-fault rate | `>=` |
+| Minimum success rate | `≥` |
+| Maximum p95 latency | `≤` |
+| Maximum transport errors | `≤` |
+| Minimum fault rate | `≥` |
 
 A contract passes only when every configured check passes.
 
@@ -139,8 +139,8 @@ RuptureLab is validated at three levels:
 
 | Layer | Current v1.0 gate |
 | --- | --- |
-| Backend | 87 tests; strict mypy; Ruff; Alembic upgrade/check/downgrade; pip dependency audit; 100% line and branch coverage across the `rupturelab` package |
-| Frontend | 31 unit/component tests; strict TypeScript; ESLint; Prettier; npm production audit; 100% statement/branch/function/line coverage across project-owned frontend logic; 3 Chromium flows |
+| Backend | 108 tests; strict mypy; Ruff; Alembic upgrade/check/downgrade; pip dependency audit; 100% line and branch coverage across the `rupturelab` package |
+| Frontend | 53 unit/component tests; strict TypeScript; ESLint; Prettier; npm production audit; 100% statement/branch/function/line coverage across project-owned frontend logic; 5 Chromium flows |
 | System | Production Compose build; five healthy services; restart and persistence smoke checks; overlapping-run protection; non-root container checks; real Chromium run through Next.js → API → proxy → target → PostgreSQL |
 
 GitHub Actions runs the same three pipelines on every pull request and push to `main`: **Backend Quality**, **Frontend Quality**, and **System Quality**.
@@ -212,7 +212,7 @@ npm --prefix frontend run test:system
 
 ## Scope and safety
 
-RuptureLab is designed for local development, test environments, and systems you own or are explicitly authorized to test. The proxy control namespace has no authentication layer and should not be exposed directly to an untrusted network. It is a resilience experimentation tool, not a load-testing platform, service mesh, or production traffic-management system.
+RuptureLab is designed for local development, test environments, and systems you own or are explicitly authorized to test. The proxy control namespace has no authentication layer and should not be exposed directly to an untrusted network. Experiment headers and request bodies are persisted with completed runs, so use synthetic test values rather than real credentials or sensitive payloads. It is a resilience experimentation tool, not a load-testing platform, service mesh, or production traffic-management system.
 
 See [SECURITY.md](SECURITY.md) for the operational security model.
 

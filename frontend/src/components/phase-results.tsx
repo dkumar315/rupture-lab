@@ -29,10 +29,10 @@ export function PhaseResults({ phases }: { phases: PhaseResult[] }) {
       {phases.map((phase) => {
         const success = successRate(phase);
         const fault = faultRate(phase);
-        const latencyWidth = Math.max(
-          (phase.p95_latency_ms / maxLatency) * 100,
-          4,
-        );
+        const latencyWidth =
+          phase.p95_latency_ms === 0
+            ? 0
+            : Math.max((phase.p95_latency_ms / maxLatency) * 100, 4);
 
         return (
           <article

@@ -16,7 +16,7 @@ export interface LivePhaseProgress {
   successfulRequests: number;
   faultedRequests: number;
   transportErrors: number;
-  latestLatencyMs: number | null;
+  latencyMs: number | null;
   result: PhaseResult | null;
 }
 
@@ -46,7 +46,7 @@ function emptyPhase(): LivePhaseProgress {
     successfulRequests: 0,
     faultedRequests: 0,
     transportErrors: 0,
-    latestLatencyMs: null,
+    latencyMs: null,
     result: null,
   };
 }
@@ -135,7 +135,7 @@ export function applyExperimentEvent(
               phase.faultedRequests + (measurement.fault === null ? 0 : 1),
             transportErrors:
               phase.transportErrors + (measurement.error === null ? 0 : 1),
-            latestLatencyMs: measurement.duration_ms,
+            latencyMs: measurement.duration_ms,
           },
         },
         recentRequests: [...state.recentRequests, observation].slice(-8),
@@ -154,7 +154,7 @@ export function applyExperimentEvent(
             successfulRequests: event.phase_result.successful_requests,
             faultedRequests: event.phase_result.faulted_requests,
             transportErrors: event.phase_result.transport_errors,
-            latestLatencyMs: event.phase_result.p95_latency_ms,
+            latencyMs: event.phase_result.p95_latency_ms,
             result: event.phase_result,
           },
         },

@@ -25,6 +25,16 @@ function buildRows(phases: PhaseResult[]): MeasurementRow[] {
   });
 }
 
+function measurementOutcome(
+  measurement: PhaseResult["measurements"][number],
+): string {
+  return (
+    measurement.error ??
+    measurement.fault ??
+    (measurement.successful ? "success" : "failed")
+  );
+}
+
 export function MeasurementTable({ phases }: { phases: PhaseResult[] }) {
   const rows = buildRows(phases);
 
@@ -38,7 +48,30 @@ export function MeasurementTable({ phases }: { phases: PhaseResult[] }) {
         </p>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="divide-y divide-white/5 md:hidden">
+        {rows.map(({ key, measurement, phase, sequenceNumber }) => (
+          <div key={key} className="px-5 py-4">
+            <div className="flex items-center justify-between gap-4">
+              <span className="font-mono text-[10px] text-zinc-500 uppercase">
+                {phase} {sequenceNumber}
+              </span>
+              <span className="font-mono text-xs text-zinc-400">
+                {measurement.status_code ?? "transport"}
+              </span>
+            </div>
+            <div className="mt-2 flex items-center justify-between gap-4 text-xs">
+              <span className="truncate text-zinc-500">
+                {measurementOutcome(measurement)}
+              </span>
+              <span className="shrink-0 font-mono text-zinc-500">
+                {formatLatency(measurement.duration_ms)}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[680px] text-left">
           <thead>
             <tr className="border-b border-white/6 text-[10px] font-semibold tracking-wide text-zinc-700 uppercase">
@@ -62,11 +95,7 @@ export function MeasurementTable({ phases }: { phases: PhaseResult[] }) {
                 <td className="px-5 py-3 font-mono">
                   {formatLatency(measurement.duration_ms)}
                 </td>
-                <td className="px-5 py-3">
-                  {measurement.error ??
-                    measurement.fault ??
-                    (measurement.successful ? "success" : "failed")}
-                </td>
+                <td className="px-5 py-3">{measurementOutcome(measurement)}</td>
               </tr>
             ))}
           </tbody>

@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 import httpx2
 from fastapi import FastAPI
 
+from rupturelab import __version__
 from rupturelab.config import get_settings
 from rupturelab.faults.engine import FaultEngine
 from rupturelab.proxy.admin import router as admin_router
@@ -37,7 +38,7 @@ def create_proxy_app(
 
     app = FastAPI(
         title="RuptureLab Proxy",
-        version="0.1.0",
+        version=__version__,
         docs_url=None,
         redoc_url=None,
         openapi_url=None,

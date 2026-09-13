@@ -1,64 +1,29 @@
-# Development Roadmap
+# Roadmap
 
-## 0. Foundation
-- Repository setup
-- FastAPI service
-- Health endpoint
-- Initial tests and linting
+RuptureLab v1.0 is feature-complete. The milestones below describe the path to the first public release.
 
-## 1. Demo target
-- Deterministic sample API
-- Read and write endpoints
-- Behaviour suitable for resilience experiments
+## v1.0 — complete
 
-## 2. Reverse proxy
-- Async HTTP forwarding
-- Request and response metadata
-- Transparent pass-through behaviour
+- [x] FastAPI control API and deterministic demo target
+- [x] transparent async reverse proxy
+- [x] latency, HTTP error, timeout, and malformed-JSON fault injection
+- [x] baseline → fault → recovery experiment engine
+- [x] declarative resilience contracts
+- [x] PostgreSQL persistence and Alembic migrations
+- [x] Next.js experiment builder, history, and result views
+- [x] live experiment metrics over reconnectable Server-Sent Events
+- [x] production-style Docker Compose runtime and readiness checks
+- [x] backend, frontend, browser, and full-stack system quality gates
+- [x] v1.0 documentation and release packaging
 
-## 3. Fault injection
-- Latency
-- HTTP error responses
-- Timeouts
-- Malformed responses
-- Configurable probability and duration
+## Possible future directions
 
-## 4. Experiment engine
-- Baseline phase
-- Fault phase
-- Recovery phase
-- Repeatable experiment configuration
+These are intentionally not commitments for v1.0. They become useful only if the product scope grows.
 
-## 5. Resilience contracts
-- Success-rate thresholds
-- Latency thresholds
-- Recovery-time thresholds
-- Duplicate-write detection
-- Pass/fail evaluation
+- isolate proxy state per experiment to support safe parallel runs
+- authenticated control-plane access for remote deployments
+- exportable experiment reports
+- configurable external targets and reusable experiment profiles
+- longer-term observability for multi-instance deployments
 
-## 6. Persistence
-- PostgreSQL
-- Experiment history
-- Request metrics
-- Database migrations
-
-## 7. Dashboard
-- Experiment configuration
-- Live metrics
-- Results
-- History
-- Failure visualisation
-
-## 8. Engineering hardening
-- Integration tests
-- CI
-- Docker Compose
-- Structured logging
-- Health checks
-
-## 9. v1.0
-- Demo mode
-- Exportable report
-- Architecture documentation
-- Screenshots and demo recording
-- Public GitHub release
+The current architecture and its deliberate limits are documented in [architecture.md](architecture.md).
